@@ -8,3 +8,13 @@ export interface Course {
   created_at: string;
   updated_at: string;
 }
+
+export interface Lesson {
+  id: string;
+  course_id: string | null;
+  title: string;
+  content: string | null;
+  video_url: string | null;
+  order_index: number | null;
+  created_at: string;
+}
