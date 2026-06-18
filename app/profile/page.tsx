@@ -1,0 +1,211 @@
+import Link from "next/link";
+import Navbar from "@/components/layout/Navbar";
+import { createClient } from "@/lib/supabase/server";
+import { redirect } from "next/navigation";
+import { updateProfile } from "@/app/auth/actions";
+
+export default async function ProfilePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
+}) {
+  const supabase = await createClient();
+  
+  // 1. Get authenticated user
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) {
+    redirect("/login");
+  }
+
+  // 2. Fetch profile info
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("*")
+    .eq("id", user.id)
+    .single();
+
+  // 3. Fetch years/grades list for the dropdown selection
+  const { data: years } = await supabase
+    .from("years")
+    .select("id, title")
+    .order("order_index", { ascending: true });
+
+  const params = await searchParams;
+  const error = params.error;
+  const success = params.success;
+
+  return (
+    <>
+      <Navbar />
+
+      <main className="min-h-screen pt-28 pb-16 bg-[#0F1623] relative overflow-hidden flex items-center justify-center px-4">
+        {/* Ambient background decoration */}
+        <div className="absolute inset-0 pointer-events-none">
+          <div className="absolute top-1/4 right-1/4 w-96 h-96 bg-amber-400/5 rounded-full blur-3xl" />
+          <div className="absolute bottom-1/4 left-1/4 w-80 h-80 bg-amber-400/3 rounded-full blur-3xl" />
+        </div>
+
+        <div className="w-full max-w-2xl relative z-10">
+          {/* Header */}
+          <div className="text-center mb-8">
+            <h1 className="text-3xl font-extrabold text-[#F0EDE6] mb-2 tracking-tight">
+              الملف الشخصي للطالب
+            </h1>
+            <p className="text-[#F0EDE6]/60 text-sm">
+              يمكنك الاطلاع على معلوماتك وتحديثها من هنا
+            </p>
+          </div>
+
+          {/* Success / Error Messages */}
+          {success === "true" && (
+            <div className="mb-6 p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-sm text-center">
+              تم تحديث البيانات بنجاح!
+            </div>
+          )}
+          {error && (
+            <div className="mb-6 p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm text-center">
+              {decodeURIComponent(error as string)}
+            </div>
+          )}
+
+          {/* Card */}
+          <div className="bg-[#1A2235]/90 rounded-2xl border border-white/10 p-8 shadow-2xl shadow-black/25 backdrop-blur-md">
+            <form action={updateProfile} className="space-y-6">
+              
+              {/* Row 1: Name */}
+              <div>
+                <label
+                  htmlFor="fullName"
+                  className="block text-sm font-medium text-[#F0EDE6]/70 mb-2"
+                >
+                  الاسم الكامل
+                </label>
+                <input
+                  id="fullName"
+                  name="fullName"
+                  type="text"
+                  required
+                  defaultValue={profile?.full_name || user.user_metadata?.full_name || ""}
+                  placeholder="أدخل اسمك الكامل"
+                  className="w-full px-4 py-3 rounded-xl bg-[#0F1623] border border-white/10 text-[#F0EDE6] placeholder-[#F0EDE6]/30 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400/50 focus:border-amber-400/50 transition-all duration-300"
+                />
+              </div>
+
+              {/* Row 2: Email (Disabled) */}
+              <div>
+                <label
+                  htmlFor="email"
+                  className="block text-sm font-medium text-[#F0EDE6]/40 mb-2"
+                >
+                  البريد الإلكتروني (لا يمكن تعديله)
+                </label>
+                <input
+                  id="email"
+                  name="email"
+                  type="email"
+                  disabled
+                  value={user.email || ""}
+                  className="w-full px-4 py-3 rounded-xl bg-[#0f1623]/50 border border-white/5 text-[#F0EDE6]/40 text-sm cursor-not-allowed"
+                  dir="ltr"
+                />
+              </div>
+
+              {/* Grid: Phone & Student ID */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <label
+                    htmlFor="phone"
+                    className="block text-sm font-medium text-[#F0EDE6]/70 mb-2"
+                  >
+                    رقم الهاتف
+                  </label>
+                  <input
+                    id="phone"
+                    name="phone"
+                    type="tel"
+                    required
+                    defaultValue={profile?.phone || ""}
+                    placeholder="01xxxxxxxxx"
+                    className="w-full px-4 py-3 rounded-xl bg-[#0F1623] border border-white/10 text-[#F0EDE6] placeholder-[#F0EDE6]/30 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400/50 focus:border-amber-400/50 transition-all duration-300 text-right"
+                    dir="ltr"
+                  />
+                </div>
+
+                <div>
+                  <label
+                    htmlFor="studentId"
+                    className="block text-sm font-medium text-[#F0EDE6]/40 mb-2"
+                  >
+                    كود الطالب (يتم إنشاؤه تلقائياً)
+                  </label>
+                  <input
+                    id="studentId"
+                    name="studentId"
+                    type="text"
+                    disabled
+                    value={profile?.student_id || ""}
+                    placeholder="سيظهر الكود الخاص بك هنا"
+                    className="w-full px-4 py-3 rounded-xl bg-[#0f1623]/50 border border-white/5 text-[#F0EDE6]/40 text-sm cursor-not-allowed text-right"
+                    dir="ltr"
+                  />
+                </div>
+              </div>
+
+              {/* Row 4: Year/Grade Selection */}
+              <div>
+                <label
+                  htmlFor="currentYearId"
+                  className="block text-sm font-medium text-[#F0EDE6]/70 mb-2"
+                >
+                  السنة الدراسية / الصف
+                </label>
+                <select
+                  id="currentYearId"
+                  name="currentYearId"
+                  required
+                  defaultValue={profile?.current_year_id || ""}
+                  className="w-full px-4 py-3 rounded-xl bg-[#0F1623] border border-white/10 text-[#F0EDE6] text-sm focus:outline-none focus:ring-2 focus:ring-amber-400/50 focus:border-amber-400/50 transition-all duration-300 appearance-none bg-no-repeat bg-[left_1rem_center]"
+                  style={{
+                    backgroundImage: `url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3E%3Cpath stroke='%23F0EDE6' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3E%3C/svg%3E")`,
+                    backgroundSize: "1.25rem",
+                  }}
+                >
+                  <option value="" className="bg-[#0F1623] text-[#F0EDE6]/40">
+                    -- اختر السنة الدراسية --
+                  </option>
+                  {years?.map((year) => (
+                    <option
+                      key={year.id}
+                      value={year.id}
+                      className="bg-[#0F1623] text-[#F0EDE6]"
+                    >
+                      {year.title}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Buttons */}
+              <div className="flex items-center justify-end gap-4 pt-4 border-t border-white/5">
+                <Link
+                  href="/"
+                  className="px-6 py-3 rounded-xl border border-white/10 text-[#F0EDE6]/60 text-sm font-semibold hover:border-white/20 hover:text-white transition-all duration-300"
+                >
+                  إلغاء
+                </Link>
+                
+                <button
+                  type="submit"
+                  className="px-8 py-3 rounded-xl bg-gradient-to-l from-amber-500 to-amber-600 text-[#0F1623] font-bold text-sm hover:from-amber-400 hover:to-amber-500 transition-all duration-300 shadow-lg shadow-amber-500/20 cursor-pointer"
+                >
+                  حفظ التغييرات
+                </button>
+              </div>
+
+            </form>
+          </div>
+        </div>
+      </main>
+    </>
+  );
+}

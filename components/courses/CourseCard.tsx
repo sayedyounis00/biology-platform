@@ -4,9 +4,10 @@ import { slugify } from "@/lib/utils";
 
 interface CourseCardProps {
   course: Course;
+  isLoggedIn?: boolean;
 }
 
-export default function CourseCard({ course }: CourseCardProps) {
+export default function CourseCard({ course, isLoggedIn }: CourseCardProps) {
   const isFree = !course.price || course.price === 0;
   const firstLetter = course.title?.charAt(0)?.toUpperCase() ?? "C";
 
@@ -61,10 +62,10 @@ export default function CourseCard({ course }: CourseCardProps) {
         {/* Enroll Button */}
         <div className="pt-2">
           <Link
-            href={`/courses/${course.id}-${slugify(course.title)}`}
+            href={isLoggedIn ? `/courses/${course.id}-${slugify(course.title)}` : "/register"}
             className="flex items-center justify-center w-full px-4 py-2.5 rounded-xl bg-[#FBBF24] text-[#0F1623] font-bold text-sm transition-all duration-300 hover:bg-[#FBBF24]/90 hover:shadow-[0_0_20px_rgba(251,191,36,0.15)] text-center"
           >
-            اشترك الآن
+            {isFree ? "شاهد الدروس" : "اشترك الآن"}
           </Link>
         </div>
       </div>

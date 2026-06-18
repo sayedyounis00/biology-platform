@@ -1,8 +1,8 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import Navbar from "@/components/layout/Navbar";
 import LessonCard from "@/components/courses/LessonCard";
-import { supabase } from "@/lib/supabase/server";
+import { supabase, createClient } from "@/lib/supabase/server";
 import type { Course, Lesson } from "@/types";
 
 export default async function CourseLessonsPage({
@@ -44,6 +44,27 @@ export default async function CourseLessonsPage({
   }
 
   const course = courseData as Course;
+
+  // If the course is paid, protect access via enrollment check
+  if (course.price && course.price > 0) {
+    const supabaseClient = await createClient();
+    const { data: { user } } = await supabaseClient.auth.getUser();
+
+    if (!user) {
+      redirect("/register");
+    }
+
+    const { data: enrollmentData } = await supabaseClient
+      .from("enrollments")
+      .select("id")
+      .eq("user_id", user.id)
+      .eq("course_id", course.id)
+      .maybeSingle();
+
+    if (!enrollmentData) {
+      redirect(`/courses/${rawId}/payment`);
+    }
+  }
 
   // Fetch lessons ordered by created_at descending (newest to oldest)
   const { data: lessonsData, error: lessonsError } = await supabase
@@ -171,7 +192,9 @@ export default async function CourseLessonsPage({
           ) : (
             <div className="flex flex-col gap-4 max-w-3xl mx-auto w-full">
               {lessons.map((lesson) => (
-                <LessonCard key={lesson.id} lesson={lesson} />
+                <Link key={lesson.id} href={`/courses/${rawId}/lessons/${lesson.id}`} className="block">
+                  <LessonCard lesson={lesson} />
+                </Link>
               ))}
             </div>
           )}

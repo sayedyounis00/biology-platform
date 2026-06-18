@@ -3,7 +3,7 @@ import Navbar from "@/components/layout/Navbar";
 import CourseCard from "@/components/courses/CourseCard";
 import ScrollVideoHero from "@/components/home/ScrollVideoHero";
 import ParallaxSection from "@/components/home/ParallaxSection";
-import { supabase } from "@/lib/supabase/server";
+import { supabase, createClient } from "@/lib/supabase/server";
 import type { Course } from "@/types";
 
 async function getData(): Promise<{
@@ -35,6 +35,28 @@ async function getData(): Promise<{
 
 export default async function Home() {
   const { courseCount, featuredCourses } = await getData();
+  const supabaseClient = await createClient();
+  const { data: { user } } = await supabaseClient.auth.getUser();
+
+  let userYearOrderIndex: number | null = null;
+  if (user) {
+    const { data: profile } = await supabaseClient
+      .from("profiles")
+      .select("current_year_id")
+      .eq("id", user.id)
+      .maybeSingle();
+
+    if (profile?.current_year_id) {
+      const { data: year } = await supabaseClient
+        .from("years")
+        .select("order_index")
+        .eq("id", profile.current_year_id)
+        .maybeSingle();
+      if (year) {
+        userYearOrderIndex = year.order_index;
+      }
+    }
+  }
 
   return (
     <>
@@ -71,19 +93,21 @@ export default async function Home() {
                   >
                     تصفح الكورسات
                   </Link>
-                  <Link
-                    href="/signup"
-                    id="hero-signup-cta"
-                    className="inline-flex items-center justify-center px-6 py-3.5 rounded-full border border-white/10 text-[#F0EDE6]/80 text-sm font-semibold hover:border-[#FBBF24]/30 hover:text-white transition-all duration-300"
-                  >
-                    ابدأ مجاناً
-                    <span
-                      aria-hidden="true"
-                      className="mr-1.5 transition-transform duration-300 hover:-translate-x-1"
+                  {!user && (
+                    <Link
+                      href="/register"
+                      id="hero-signup-cta"
+                      className="inline-flex items-center justify-center px-6 py-3.5 rounded-full border border-white/10 text-[#F0EDE6]/80 text-sm font-semibold hover:border-[#FBBF24]/30 hover:text-white transition-all duration-300"
                     >
-                      ←
-                    </span>
-                  </Link>
+                      ابدأ مجاناً
+                      <span
+                        aria-hidden="true"
+                        className="mr-1.5 transition-transform duration-300 hover:-translate-x-1"
+                      >
+                        ←
+                      </span>
+                    </Link>
+                  )}
                 </div>
               </div>
 
@@ -130,7 +154,7 @@ export default async function Home() {
                   وفرنالك اجواء تنافسية بينك وبين زمايلك عشان نحفزك تقفل .. لو طلعت من الأوائل في امتحانات المستر هتفوز بجوايز مش هتخطر على بالك .. هنروق على الأوائل المتفوقين
                 </p>
                 <Link
-                  href="/signup"
+                  href="/"
                   id="study-win-cta"
                   className="inline-flex items-center justify-center px-8 py-3.5 rounded-lg bg-[#C0E838] text-[#0F1623] text-base font-bold hover:bg-[#b0d530] transition-colors duration-300 shadow-[0_4px_20px_rgba(192,232,56,0.25)]"
                 >
@@ -175,89 +199,95 @@ export default async function Home() {
             {/* Section header */}
             <div className="text-center mb-12 border-b border-[#ffffff08] pb-6">
               <h2 className="font-gravity text-3xl font-extrabold tracking-tight">
-                اختار الصف الدراسي
+                {userYearOrderIndex ? "دروسك" : "اختار الصف الدراسي"}
               </h2>
             </div>
 
             {/* Grid of three grade levels matching the uploaded image design */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div className={`grid grid-cols-1 ${userYearOrderIndex ? "max-w-md mx-auto" : "md:grid-cols-3"} gap-8`}>
               {/* Card 1 — الصف الدراسي الأول */}
-              <Link
-                href="/courses?grade=1"
-                className="group block rounded-2xl bg-[#101725] border border-white/10 overflow-hidden transition-all duration-300 hover:border-teal-500/40 hover:shadow-[0_12px_40px_rgba(13,148,136,0.15)]"
-              >
-                {/* Thumbnail */}
-                <div className="aspect-[4/3] relative overflow-hidden bg-[#0A0E17]">
-                  <img
-                    src="/biology_grade1.png"
-                    alt="الصف الدراسي الأول"
-                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                  />
-                </div>
+              {(!userYearOrderIndex || userYearOrderIndex === 1) && (
+                <Link
+                  href="/courses?grade=1"
+                  className="group block rounded-2xl bg-[#101725] border border-white/10 overflow-hidden transition-all duration-300 hover:border-teal-500/40 hover:shadow-[0_12px_40px_rgba(13,148,136,0.15)]"
+                >
+                  {/* Thumbnail */}
+                  <div className="aspect-[4/3] relative overflow-hidden bg-[#0A0E17]">
+                    <img
+                      src="/biology_grade1.png"
+                      alt="الصف الدراسي الأول"
+                      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                    />
+                  </div>
 
-                {/* Content Box */}
-                <div className="p-6 text-right flex flex-col gap-4">
-                  <h3 className="text-[#F0EDE6] text-xl font-bold font-sans">
-                    الصف الدراسي الأول
-                  </h3>
-                  <div className="h-[2px] w-full bg-teal-600/80 transition-colors group-hover:bg-teal-400" />
-                  <p className="text-[#F0EDE6]/60 text-sm font-medium">
-                    جميع كورسات الصف الأول الثانوي
-                  </p>
-                </div>
-              </Link>
+                  {/* Content Box */}
+                  <div className="p-6 text-right flex flex-col gap-4">
+                    <h3 className="text-[#F0EDE6] text-xl font-bold font-sans">
+                      الصف الدراسي الأول
+                    </h3>
+                    <div className="h-[2px] w-full bg-teal-600/80 transition-colors group-hover:bg-teal-400" />
+                    <p className="text-[#F0EDE6]/60 text-sm font-medium">
+                      جميع كورسات الصف الأول الثانوي
+                    </p>
+                  </div>
+                </Link>
+              )}
 
               {/* Card 2 — الصف الدراسي الثاني */}
-              <Link
-                href="/courses?grade=2"
-                className="group block rounded-2xl bg-[#101725] border border-white/10 overflow-hidden transition-all duration-300 hover:border-teal-500/40 hover:shadow-[0_12px_40px_rgba(13,148,136,0.15)]"
-              >
-                {/* Thumbnail */}
-                <div className="aspect-[4/3] relative overflow-hidden bg-[#0A0E17]">
-                  <img
-                    src="/biology_grade2.png"
-                    alt="الصف الدراسي الثاني"
-                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                  />
-                </div>
+              {(!userYearOrderIndex || userYearOrderIndex === 2) && (
+                <Link
+                  href="/courses?grade=2"
+                  className="group block rounded-2xl bg-[#101725] border border-white/10 overflow-hidden transition-all duration-300 hover:border-teal-500/40 hover:shadow-[0_12px_40px_rgba(13,148,136,0.15)]"
+                >
+                  {/* Thumbnail */}
+                  <div className="aspect-[4/3] relative overflow-hidden bg-[#0A0E17]">
+                    <img
+                      src="/biology_grade2.png"
+                      alt="الصف الدراسي الثاني"
+                      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                    />
+                  </div>
 
-                {/* Content Box */}
-                <div className="p-6 text-right flex flex-col gap-4">
-                  <h3 className="text-[#F0EDE6] text-xl font-bold font-sans">
-                    الصف الدراسي الثاني
-                  </h3>
-                  <div className="h-[2px] w-full bg-teal-600/80 transition-colors group-hover:bg-teal-400" />
-                  <p className="text-[#F0EDE6]/60 text-sm font-medium">
-                    جميع كورسات الصف الثاني الثانوي
-                  </p>
-                </div>
-              </Link>
+                  {/* Content Box */}
+                  <div className="p-6 text-right flex flex-col gap-4">
+                    <h3 className="text-[#F0EDE6] text-xl font-bold font-sans">
+                      الصف الدراسي الثاني
+                    </h3>
+                    <div className="h-[2px] w-full bg-teal-600/80 transition-colors group-hover:bg-teal-400" />
+                    <p className="text-[#F0EDE6]/60 text-sm font-medium">
+                      جميع كورسات الصف الثاني الثانوي
+                    </p>
+                  </div>
+                </Link>
+              )}
 
               {/* Card 3 — الصف الدراسي الثالث */}
-              <Link
-                href="/courses?grade=3"
-                className="group block rounded-2xl bg-[#101725] border border-white/10 overflow-hidden transition-all duration-300 hover:border-teal-500/40 hover:shadow-[0_12px_40px_rgba(13,148,136,0.15)]"
-              >
-                {/* Thumbnail */}
-                <div className="aspect-[4/3] relative overflow-hidden bg-[#0A0E17]">
-                  <img
-                    src="/biology_grade3.png"
-                    alt="الصف الدراسي الثالث"
-                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                  />
-                </div>
+              {(!userYearOrderIndex || userYearOrderIndex === 3) && (
+                <Link
+                  href="/courses?grade=3"
+                  className="group block rounded-2xl bg-[#101725] border border-white/10 overflow-hidden transition-all duration-300 hover:border-teal-500/40 hover:shadow-[0_12px_40px_rgba(13,148,136,0.15)]"
+                >
+                  {/* Thumbnail */}
+                  <div className="aspect-[4/3] relative overflow-hidden bg-[#0A0E17]">
+                    <img
+                      src="/biology_grade3.png"
+                      alt="الصف الدراسي الثالث"
+                      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                    />
+                  </div>
 
-                {/* Content Box */}
-                <div className="p-6 text-right flex flex-col gap-4">
-                  <h3 className="text-[#F0EDE6] text-xl font-bold font-sans">
-                    الصف الدراسي الثالث
-                  </h3>
-                  <div className="h-[2px] w-full bg-teal-600/80 transition-colors group-hover:bg-teal-400" />
-                  <p className="text-[#F0EDE6]/60 text-sm font-medium">
-                    جميع كورسات الصف الثالث الثانوي
-                  </p>
-                </div>
-              </Link>
+                  {/* Content Box */}
+                  <div className="p-6 text-right flex flex-col gap-4">
+                    <h3 className="text-[#F0EDE6] text-xl font-bold font-sans">
+                      الصف الدراسي الثالث
+                    </h3>
+                    <div className="h-[2px] w-full bg-teal-600/80 transition-colors group-hover:bg-teal-400" />
+                    <p className="text-[#F0EDE6]/60 text-sm font-medium">
+                      جميع كورسات الصف الثالث الثانوي
+                    </p>
+                  </div>
+                </Link>
+              )}
             </div>
           </div>
         </ParallaxSection>

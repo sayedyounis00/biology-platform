@@ -1,7 +1,7 @@
 import Link from "next/link";
 import Navbar from "@/components/layout/Navbar";
 import CourseCard from "@/components/courses/CourseCard";
-import { supabase } from "@/lib/supabase/server";
+import { supabase, createClient } from "@/lib/supabase/server";
 import type { Course } from "@/types";
 
 const gradeLabels: Record<string, string> = {
@@ -15,9 +15,36 @@ export default async function CoursesPage({
 }: {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }) {
+  const supabaseClient = await createClient();
+  const { data: { user } } = await supabaseClient.auth.getUser();
+  const isLoggedIn = !!user;
+
   const { grade } = await searchParams;
-  // Default to grade '1' if no grade parameter is provided
-  const gradeFilter = typeof grade === "string" ? grade : "1";
+
+  let userYearOrderIndex: number | null = null;
+  if (user) {
+    const { data: profile } = await supabaseClient
+      .from("profiles")
+      .select("current_year_id")
+      .eq("id", user.id)
+      .maybeSingle();
+
+    if (profile?.current_year_id) {
+      const { data: year } = await supabaseClient
+        .from("years")
+        .select("order_index")
+        .eq("id", profile.current_year_id)
+        .maybeSingle();
+      if (year) {
+        userYearOrderIndex = year.order_index;
+      }
+    }
+  }
+
+  // Enforce grade filter to user's selected year if they have one
+  const gradeFilter = userYearOrderIndex
+    ? userYearOrderIndex.toString()
+    : (typeof grade === "string" ? grade : "1");
 
   let courses: Course[] = [];
   let errorOccurred = false;
@@ -95,21 +122,23 @@ export default async function CoursesPage({
             </p>
 
             {/* Grade filter tabs */}
-            <div className="flex items-center justify-center gap-3 mt-4 flex-wrap">
-              {["1", "2", "3"].map((g) => (
-                <Link
-                  key={g}
-                  href={`/courses?grade=${g}`}
-                  className={`px-4 py-2 rounded-full text-xs font-semibold transition-all duration-300 border ${
-                    gradeFilter === g
-                      ? "bg-[#FBBF24] text-[#0F1623] border-[#FBBF24]"
-                      : "bg-transparent text-[#F0EDE6]/60 border-[#ffffff14] hover:border-[#FBBF24]/40 hover:text-[#F0EDE6]"
-                  }`}
-                >
-                  {gradeLabels[g]}
-                </Link>
-              ))}
-            </div>
+            {!userYearOrderIndex && (
+              <div className="flex items-center justify-center gap-3 mt-4 flex-wrap">
+                {["1", "2", "3"].map((g) => (
+                  <Link
+                    key={g}
+                    href={`/courses?grade=${g}`}
+                    className={`px-4 py-2 rounded-full text-xs font-semibold transition-all duration-300 border ${
+                      gradeFilter === g
+                        ? "bg-[#FBBF24] text-[#0F1623] border-[#FBBF24]"
+                        : "bg-transparent text-[#F0EDE6]/60 border-[#ffffff14] hover:border-[#FBBF24]/40 hover:text-[#F0EDE6]"
+                    }`}
+                  >
+                    {gradeLabels[g]}
+                  </Link>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Error / Empty state / Grid */}
@@ -130,7 +159,7 @@ export default async function CoursesPage({
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
               {courses.map((course) => (
-                <CourseCard key={course.id} course={course} />
+                <CourseCard key={course.id} course={course} isLoggedIn={isLoggedIn} />
               ))}
             </div>
           )}
