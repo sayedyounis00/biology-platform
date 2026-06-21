@@ -1,6 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { createClient as createBasicClient, SupabaseClient } from "@supabase/supabase-js";
 import { cookies } from "next/headers";
+import { fetchWithTimeout } from "./timeout-fetch";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "";
@@ -20,7 +21,11 @@ function isValidUrl(url: string): boolean {
  */
 export const supabase: SupabaseClient | null =
   isValidUrl(supabaseUrl) && supabaseAnonKey.length > 10
-    ? createBasicClient(supabaseUrl, supabaseAnonKey)
+    ? createBasicClient(supabaseUrl, supabaseAnonKey, {
+        global: {
+          fetch: (url, options) => fetchWithTimeout(url, options),
+        },
+      })
     : null;
 
 /**
@@ -34,6 +39,9 @@ export async function createClient() {
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
+      global: {
+        fetch: (url, options) => fetchWithTimeout(url, options),
+      },
       cookies: {
         getAll() {
           return cookieStore.getAll();
@@ -53,3 +61,4 @@ export async function createClient() {
     }
   );
 }
+

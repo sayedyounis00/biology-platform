@@ -1,5 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { fetchWithTimeout } from "./timeout-fetch";
 
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({
@@ -10,6 +11,9 @@ export async function updateSession(request: NextRequest) {
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
+      global: {
+        fetch: (url, options) => fetchWithTimeout(url, options),
+      },
       cookies: {
         getAll() {
           return request.cookies.getAll();
@@ -35,7 +39,21 @@ export async function updateSession(request: NextRequest) {
   // IMPORTANT: Do not run code between createServerClient and
   // supabase.auth.getClaims(). A simple mistake could make it very hard
   // to debug issues with users being randomly logged out.
-  await supabase.auth.getClaims();
+  // We only run this if there is actually a session cookie or auth header present,
+  // to avoid hitting timeouts for non-logged-in users. We also wrap it in try/catch.
+  try {
+    const hasAuthCookie = request.cookies.getAll().some((cookie) =>
+      cookie.name.includes("auth-token") || cookie.name.startsWith("sb-")
+    );
+    const hasAuthHeader = !!request.headers.get("Authorization");
+
+    if (hasAuthCookie || hasAuthHeader) {
+      await supabase.auth.getClaims();
+    }
+  } catch (error) {
+    console.error("Supabase session refresh failed in proxy middleware:", error);
+  }
 
   return supabaseResponse;
 }
+

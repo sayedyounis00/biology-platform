@@ -33,33 +33,50 @@ export default async function CourseLessonsPage({
   }
 
   // Fetch the course details
-  const { data: courseData, error: courseError } = await supabase
-    .from("courses")
-    .select("id, title, description, thumbnail_url, price, is_published, created_at")
-    .eq("id", id)
-    .single();
+  let course: Course;
+  try {
+    const { data: courseData, error: courseError } = await supabase
+      .from("courses")
+      .select("id, title, description, thumbnail_url, price, is_published, created_at")
+      .eq("id", id)
+      .single();
 
-  if (courseError || !courseData) {
+    if (courseError || !courseData) {
+      notFound();
+    }
+    course = courseData as Course;
+  } catch (error) {
+    console.error("Error fetching course in lessons page:", error);
     notFound();
   }
-
-  const course = courseData as Course;
 
   // If the course is paid, protect access via enrollment check
   if (course.price && course.price > 0) {
     const supabaseClient = await createClient();
-    const { data: { user } } = await supabaseClient.auth.getUser();
+    let user = null;
+    try {
+      const { data } = await supabaseClient.auth.getUser();
+      user = data?.user || null;
+    } catch (e) {
+      console.error("Error checking user session in course lessons page:", e);
+    }
 
     if (!user) {
       redirect("/register");
     }
 
-    const { data: enrollmentData } = await supabaseClient
-      .from("enrollments")
-      .select("id")
-      .eq("user_id", user.id)
-      .eq("course_id", course.id)
-      .maybeSingle();
+    let enrollmentData = null;
+    try {
+      const { data } = await supabaseClient
+        .from("enrollments")
+        .select("id")
+        .eq("user_id", user.id)
+        .eq("course_id", course.id)
+        .maybeSingle();
+      enrollmentData = data;
+    } catch (e) {
+      console.error("Error checking enrollment in course lessons page:", e);
+    }
 
     if (!enrollmentData) {
       redirect(`/courses/${rawId}/payment`);
@@ -67,18 +84,26 @@ export default async function CourseLessonsPage({
   }
 
   // Fetch lessons ordered by created_at descending (newest to oldest)
-  const { data: lessonsData, error: lessonsError } = await supabase
-    .from("lessons")
-    .select("id, course_id, title, content, video_url, order_index, created_at")
-    .eq("course_id", id)
-    .order("created_at", { ascending: false });
+  let lessons: Lesson[] = [];
+  let lessonsErrorOccurred = false;
 
-  if (lessonsError) {
-    console.error("Error fetching lessons for course ID:", id, lessonsError);
+  try {
+    const { data: lessonsData, error: lessonsError } = await supabase
+      .from("lessons")
+      .select("id, course_id, title, content, video_url, order_index, created_at")
+      .eq("course_id", id)
+      .order("created_at", { ascending: false });
+
+    if (lessonsError) {
+      console.error("Error fetching lessons for course ID:", id, lessonsError);
+      lessonsErrorOccurred = true;
+    } else {
+      lessons = (lessonsData as Lesson[]) || [];
+    }
+  } catch (error) {
+    console.error("Error fetching lessons from Supabase:", error);
+    lessonsErrorOccurred = true;
   }
-
-  const lessons: Lesson[] = (lessonsData as Lesson[]) || [];
-  const lessonsErrorOccurred = !!lessonsError;
 
   return (
     <>

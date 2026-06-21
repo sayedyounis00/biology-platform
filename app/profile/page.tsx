@@ -3,6 +3,7 @@ import Navbar from "@/components/layout/Navbar";
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { updateProfile } from "@/app/auth/actions";
+import { slugify } from "@/lib/utils";
 
 export default async function ProfilePage({
   searchParams,
@@ -11,24 +12,73 @@ export default async function ProfilePage({
 }) {
   const supabase = await createClient();
   
-  // 1. Get authenticated user
-  const { data: { user } } = await supabase.auth.getUser();
+  let user = null;
+  try {
+    const { data } = await supabase.auth.getUser();
+    user = data?.user || null;
+  } catch (error) {
+    console.error("Error checking auth user on profile page:", error);
+  }
+
   if (!user) {
     redirect("/login");
   }
 
-  // 2. Fetch profile info
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("*")
-    .eq("id", user.id)
-    .single();
+  let profile = null;
+  try {
+    const { data } = await supabase
+      .from("profiles")
+      .select("*")
+      .eq("id", user.id)
+      .single();
+    profile = data;
+  } catch (error) {
+    console.error("Error fetching user profile details:", error);
+  }
 
-  // 3. Fetch years/grades list for the dropdown selection
-  const { data: years } = await supabase
-    .from("years")
-    .select("id, title")
-    .order("order_index", { ascending: true });
+  let years: any[] = [];
+  try {
+    const { data } = await supabase
+      .from("years")
+      .select("id, title")
+      .order("order_index", { ascending: true });
+    years = data || [];
+  } catch (error) {
+    console.error("Error fetching years list on profile page:", error);
+  }
+
+  let enrolledCourses: any[] = [];
+  if (user) {
+    try {
+      const { data, error } = await supabase
+        .from("enrollments")
+        .select(`
+          course_id,
+          enrolled_at,
+          courses (
+            id,
+            title,
+            description,
+            thumbnail_url,
+            price
+          )
+        `)
+        .eq("user_id", user.id)
+        .order("enrolled_at", { ascending: false });
+        
+      if (error) {
+        console.error("Error fetching enrolled courses for profile:", error);
+      } else {
+        enrolledCourses = data || [];
+      }
+    } catch (e) {
+      console.error("Error catching enrolled courses fetch:", e);
+    }
+  }
+
+  const subscribedCourses = enrolledCourses
+    .map((enrollment: any) => enrollment.courses)
+    .filter(Boolean);
 
   const params = await searchParams;
   const error = params.error;
@@ -203,6 +253,75 @@ export default async function ProfilePage({
               </div>
 
             </form>
+          </div>
+
+          {/* Subscribed Courses Section */}
+          <div className="mt-8 bg-[#1A2235]/90 rounded-2xl border border-white/10 p-8 shadow-2xl shadow-black/25 backdrop-blur-md">
+            <h2 className="text-xl font-bold text-[#F0EDE6] mb-6 text-right flex items-center justify-between">
+              <span>الكورسات المشترك بها</span>
+              <span className="px-3 py-1 rounded-full text-xs font-semibold bg-[#FBBF24]/10 text-[#FBBF24]">
+                {subscribedCourses.length} {subscribedCourses.length === 1 ? "كورس" : "كورسات"}
+              </span>
+            </h2>
+
+            {subscribedCourses.length === 0 ? (
+              <div className="text-center py-8">
+                <p className="text-[#F0EDE6]/50 text-sm mb-4">
+                  لم تشترك في أي كورس بعد. ابدأ بتصفح الكورسات المتاحة الآن!
+                </p>
+                <Link
+                  href="/courses"
+                  className="inline-flex items-center justify-center px-6 py-2.5 rounded-xl bg-[#FBBF24] text-[#0F1623] font-bold text-sm transition-all duration-300 hover:bg-[#FBBF24]/90 hover:shadow-[0_0_20px_rgba(251,191,36,0.15)] text-center cursor-pointer"
+                >
+                  تصفح الكورسات المتاحة
+                </Link>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {subscribedCourses.map((course: any) => {
+                  const firstLetter = course.title?.charAt(0)?.toUpperCase() ?? "C";
+                  return (
+                    <div
+                      key={course.id}
+                      className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 rounded-xl bg-[#0F1623] border border-white/5 hover:border-[#FBBF24]/20 transition-all duration-300"
+                    >
+                      <div className="flex items-center gap-4 w-full sm:w-auto">
+                        <div className="w-16 h-12 rounded-lg overflow-hidden bg-[#1A2235] flex-shrink-0 flex items-center justify-center">
+                          {course.thumbnail_url ? (
+                            <img
+                              src={course.thumbnail_url}
+                              alt={course.title}
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <span className="text-[#F0EDE6]/20 text-lg font-bold">
+                              {firstLetter}
+                            </span>
+                          )}
+                        </div>
+                        <div className="text-right">
+                          <h3 className="text-[#F0EDE6] font-bold text-sm line-clamp-1">
+                            {course.title}
+                          </h3>
+                          {course.description && (
+                            <p className="text-[#F0EDE6]/40 text-xs line-clamp-1 mt-0.5">
+                              {course.description}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                      
+                      <Link
+                        href={`/courses/${course.id}-${slugify(course.title)}`}
+                        className="w-full sm:w-auto px-5 py-2 rounded-lg bg-emerald-500 hover:bg-emerald-600 text-white font-bold text-xs transition-all duration-300 text-center cursor-pointer"
+                      >
+                        شاهد الآن
+                      </Link>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         </div>
       </main>

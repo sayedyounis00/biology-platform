@@ -16,28 +16,53 @@ export default async function CoursesPage({
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }) {
   const supabaseClient = await createClient();
-  const { data: { user } } = await supabaseClient.auth.getUser();
+  let user = null;
+  try {
+    const { data } = await supabaseClient.auth.getUser();
+    user = data?.user || null;
+  } catch (e) {
+    console.error("Error fetching user in courses page:", e);
+  }
   const isLoggedIn = !!user;
+
+  let enrolledCourseIds: string[] = [];
+  if (user) {
+    try {
+      const { data: enrollments } = await supabaseClient
+        .from("enrollments")
+        .select("course_id")
+        .eq("user_id", user.id);
+      if (enrollments) {
+        enrolledCourseIds = enrollments.map((e: any) => e.course_id);
+      }
+    } catch (e) {
+      console.error("Error fetching user enrollments:", e);
+    }
+  }
 
   const { grade } = await searchParams;
 
   let userYearOrderIndex: number | null = null;
   if (user) {
-    const { data: profile } = await supabaseClient
-      .from("profiles")
-      .select("current_year_id")
-      .eq("id", user.id)
-      .maybeSingle();
-
-    if (profile?.current_year_id) {
-      const { data: year } = await supabaseClient
-        .from("years")
-        .select("order_index")
-        .eq("id", profile.current_year_id)
+    try {
+      const { data: profile } = await supabaseClient
+        .from("profiles")
+        .select("current_year_id")
+        .eq("id", user.id)
         .maybeSingle();
-      if (year) {
-        userYearOrderIndex = year.order_index;
+
+      if (profile?.current_year_id) {
+        const { data: year } = await supabaseClient
+          .from("years")
+          .select("order_index")
+          .eq("id", profile.current_year_id)
+          .maybeSingle();
+        if (year) {
+          userYearOrderIndex = year.order_index;
+        }
       }
+    } catch (e) {
+      console.error("Error fetching user profile/year in courses page:", e);
     }
   }
 
@@ -51,45 +76,50 @@ export default async function CoursesPage({
   let yearTitle: string | null = null;
 
   if (supabase) {
-    // Look up the matching year_id
-    let yearId: string | null = null;
+    try {
+      // Look up the matching year_id
+      let yearId: string | null = null;
 
-    const { data: yearData, error: yearError } = await supabase
-      .from("years")
-      .select("id, title")
-      .eq("order_index", parseInt(gradeFilter, 10))
-      .single();
+      const { data: yearData, error: yearError } = await supabase
+        .from("years")
+        .select("id, title")
+        .eq("order_index", parseInt(gradeFilter, 10))
+        .single();
 
-    if (yearError || !yearData) {
-      console.error("Error fetching year:", yearError);
-    } else {
-      yearId = yearData.id as string;
-      yearTitle = yearData.title as string;
-    }
-
-    // Build the courses query
-    let query = supabase
-      .from("courses")
-      .select("id, title, description, thumbnail_url, price, is_published, created_at")
-      .eq("is_published", true)
-      .order("created_at", { ascending: false });
-
-    // Apply year filter
-    if (yearId) {
-      query = query.eq("year_id", yearId);
-    } else {
-      courses = [];
-    }
-
-    if (yearId) {
-      const { data, error } = await query;
-
-      if (error) {
-        console.error("Error fetching courses:", error);
-        errorOccurred = true;
+      if (yearError || !yearData) {
+        console.error("Error fetching year:", yearError);
       } else {
-        courses = (data as Course[]) || [];
+        yearId = yearData.id as string;
+        yearTitle = yearData.title as string;
       }
+
+      // Build the courses query
+      let query = supabase
+        .from("courses")
+        .select("id, title, description, thumbnail_url, price, is_published, created_at")
+        .eq("is_published", true)
+        .order("created_at", { ascending: false });
+
+      // Apply year filter
+      if (yearId) {
+        query = query.eq("year_id", yearId);
+      } else {
+        courses = [];
+      }
+
+      if (yearId) {
+        const { data, error } = await query;
+
+        if (error) {
+          console.error("Error fetching courses:", error);
+          errorOccurred = true;
+        } else {
+          courses = (data as Course[]) || [];
+        }
+      }
+    } catch (error) {
+      console.error("Error fetching courses data from Supabase:", error);
+      errorOccurred = true;
     }
   } else {
     errorOccurred = true;
@@ -159,7 +189,12 @@ export default async function CoursesPage({
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
               {courses.map((course) => (
-                <CourseCard key={course.id} course={course} isLoggedIn={isLoggedIn} />
+                <CourseCard
+                  key={course.id}
+                  course={course}
+                  isLoggedIn={isLoggedIn}
+                  isEnrolled={enrolledCourseIds.includes(course.id)}
+                />
               ))}
             </div>
           )}

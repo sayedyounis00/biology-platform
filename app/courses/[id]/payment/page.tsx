@@ -4,6 +4,7 @@ import Navbar from "@/components/layout/Navbar";
 import CopyButton from "@/components/ui/CopyButton";
 import { createClient } from "@/lib/supabase/server";
 import type { Course } from "@/types";
+import PaymentForm from "./PaymentForm";
 
 const WALLET_NUMBER = '01XXXXXXXXX';   // replace with real number
 const WHATSAPP_NUMBER = '01XXXXXXXXX'; // replace with real number
@@ -20,23 +21,35 @@ export default async function PaymentPage({
   const supabaseClient = await createClient();
 
   // Get the current user
-  const { data: { user } } = await supabaseClient.auth.getUser();
+  let user = null;
+  try {
+    const { data } = await supabaseClient.auth.getUser();
+    user = data?.user || null;
+  } catch (e) {
+    console.error("Error checking user in payment page:", e);
+  }
+
   if (!user) {
     redirect("/login");
   }
 
   // Get the course details
-  const { data: courseData, error: courseError } = await supabaseClient
-    .from("courses")
-    .select("id, title, description, price, is_published")
-    .eq("id", id)
-    .single();
+  let course: Course;
+  try {
+    const { data: courseData, error: courseError } = await supabaseClient
+      .from("courses")
+      .select("id, title, description, price, is_published")
+      .eq("id", id)
+      .single();
 
-  if (courseError || !courseData) {
+    if (courseError || !courseData) {
+      notFound();
+    }
+    course = courseData as Course;
+  } catch (error) {
+    console.error("Error fetching course details on payment page:", error);
     notFound();
   }
-
-  const course = courseData as Course;
 
   if (!course.is_published) {
     notFound();
@@ -48,12 +61,18 @@ export default async function PaymentPage({
   }
 
   // Check if user is already enrolled
-  const { data: enrollmentData } = await supabaseClient
-    .from("enrollments")
-    .select("id")
-    .eq("user_id", user.id)
-    .eq("course_id", course.id)
-    .maybeSingle();
+  let enrollmentData = null;
+  try {
+    const { data } = await supabaseClient
+      .from("enrollments")
+      .select("id")
+      .eq("user_id", user.id)
+      .eq("course_id", course.id)
+      .maybeSingle();
+    enrollmentData = data;
+  } catch (error) {
+    console.error("Error checking enrollment on payment page:", error);
+  }
 
   if (enrollmentData) {
     redirect(`/courses/${rawId}`);
@@ -142,6 +161,13 @@ export default async function PaymentPage({
               يرجى كتابة اسمك الكامل واسم الكورس في رسالة الواتساب لنسهل عملية تفعيل الاشتراك بسرعة.
             </p>
           </div>
+
+          {/* Section 4 — Complete buying request form */}
+          <PaymentForm
+            courseId={course.id}
+            userId={user.id}
+            courseTitle={course.title}
+          />
 
           {/* Back link */}
           <div className="text-center mt-2">

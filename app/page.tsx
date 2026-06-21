@@ -14,47 +14,63 @@ async function getData(): Promise<{
     return { courseCount: 0, featuredCourses: [] };
   }
 
-  const [countResult, coursesResult] = await Promise.all([
-    supabase
-      .from("courses")
-      .select("*", { count: "exact", head: true })
-      .eq("is_published", true),
-    supabase
-      .from("courses")
-      .select("*")
-      .eq("is_published", true)
-      .order("created_at", { ascending: false })
-      .limit(3),
-  ]);
+  try {
+    const [countResult, coursesResult] = await Promise.all([
+      supabase
+        .from("courses")
+        .select("*", { count: "exact", head: true })
+        .eq("is_published", true),
+      supabase
+        .from("courses")
+        .select("*")
+        .eq("is_published", true)
+        .order("created_at", { ascending: false })
+        .limit(3),
+    ]);
 
-  return {
-    courseCount: countResult.count ?? 0,
-    featuredCourses: (coursesResult.data as Course[]) ?? [],
-  };
+    return {
+      courseCount: countResult.count ?? 0,
+      featuredCourses: (coursesResult.data as Course[]) ?? [],
+    };
+  } catch (error) {
+    console.error("Error fetching homepage data from Supabase:", error);
+    return { courseCount: 0, featuredCourses: [] };
+  }
 }
 
 export default async function Home() {
   const { courseCount, featuredCourses } = await getData();
   const supabaseClient = await createClient();
-  const { data: { user } } = await supabaseClient.auth.getUser();
+  
+  let user = null;
+  try {
+    const { data } = await supabaseClient.auth.getUser();
+    user = data?.user || null;
+  } catch (error) {
+    console.error("Error fetching user session on homepage:", error);
+  }
 
   let userYearOrderIndex: number | null = null;
   if (user) {
-    const { data: profile } = await supabaseClient
-      .from("profiles")
-      .select("current_year_id")
-      .eq("id", user.id)
-      .maybeSingle();
-
-    if (profile?.current_year_id) {
-      const { data: year } = await supabaseClient
-        .from("years")
-        .select("order_index")
-        .eq("id", profile.current_year_id)
+    try {
+      const { data: profile } = await supabaseClient
+        .from("profiles")
+        .select("current_year_id")
+        .eq("id", user.id)
         .maybeSingle();
-      if (year) {
-        userYearOrderIndex = year.order_index;
+
+      if (profile?.current_year_id) {
+        const { data: year } = await supabaseClient
+          .from("years")
+          .select("order_index")
+          .eq("id", profile.current_year_id)
+          .maybeSingle();
+        if (year) {
+          userYearOrderIndex = year.order_index;
+        }
       }
+    } catch (error) {
+      console.error("Error fetching user profile/year on homepage:", error);
     }
   }
 

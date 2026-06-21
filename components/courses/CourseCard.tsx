@@ -5,11 +5,13 @@ import { slugify } from "@/lib/utils";
 interface CourseCardProps {
   course: Course;
   isLoggedIn?: boolean;
+  isEnrolled?: boolean;
 }
 
-export default function CourseCard({ course, isLoggedIn }: CourseCardProps) {
+export default function CourseCard({ course, isLoggedIn, isEnrolled }: CourseCardProps) {
   const isFree = !course.price || course.price === 0;
   const firstLetter = course.title?.charAt(0)?.toUpperCase() ?? "C";
+  const hasAccess = isFree || isEnrolled;
 
   return (
     <div
@@ -63,9 +65,13 @@ export default function CourseCard({ course, isLoggedIn }: CourseCardProps) {
         <div className="pt-2">
           <Link
             href={isLoggedIn ? `/courses/${course.id}-${slugify(course.title)}` : "/register"}
-            className="flex items-center justify-center w-full px-4 py-2.5 rounded-xl bg-[#FBBF24] text-[#0F1623] font-bold text-sm transition-all duration-300 hover:bg-[#FBBF24]/90 hover:shadow-[0_0_20px_rgba(251,191,36,0.15)] text-center"
+            className={`flex items-center justify-center w-full px-4 py-2.5 rounded-xl font-bold text-sm transition-all duration-300 text-center ${
+              hasAccess
+                ? "bg-emerald-500 hover:bg-emerald-600 text-white hover:shadow-[0_0_20px_rgba(16,185,129,0.2)]"
+                : "bg-[#FBBF24] hover:bg-[#FBBF24]/90 text-[#0F1623] hover:shadow-[0_0_20px_rgba(251,191,36,0.15)]"
+            }`}
           >
-            {isFree ? "شاهد الدروس" : "اشترك الآن"}
+            {hasAccess ? "شاهد الآن" : "اشترك الآن"}
           </Link>
         </div>
       </div>

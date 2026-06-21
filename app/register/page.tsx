@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, Suspense } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { signup, getGoogleOAuthUrl } from "@/app/auth/actions";
@@ -46,7 +46,7 @@ function CheckIcon() {
   );
 }
 
-export default function RegisterPage() {
+function RegisterContent() {
   const searchParams = useSearchParams();
   const error = searchParams.get("error");
   const success = searchParams.get("success");
@@ -233,5 +233,17 @@ export default function RegisterPage() {
         </p>
       </div>
     </div>
+  );
+}
+
+export default function RegisterPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center bg-[#0F1623]">
+        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-amber-400"></div>
+      </div>
+    }>
+      <RegisterContent />
+    </Suspense>
   );
 }
