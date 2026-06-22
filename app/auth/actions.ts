@@ -59,13 +59,24 @@ export async function signup(formData: FormData) {
 export async function getGoogleOAuthUrl() {
   const supabase = await createClient();
   const headersList = await headers();
-  const referer = headersList.get("referer");
+  
+  // Use forwarded host and proto headers to construct the URL dynamically
+  const host = headersList.get("x-forwarded-host") || headersList.get("host");
+  const proto = headersList.get("x-forwarded-proto") || "https";
+  
   let baseUrl = "http://localhost:3000";
-  if (referer) {
-    try {
-      baseUrl = new URL(referer).origin;
-    } catch (e) {
-      // fallback
+  if (host) {
+    const isLocal = host.includes("localhost") || host.includes("127.0.0.1");
+    const scheme = isLocal ? "http" : proto;
+    baseUrl = `${scheme}://${host}`;
+  } else {
+    const referer = headersList.get("referer");
+    if (referer) {
+      try {
+        baseUrl = new URL(referer).origin;
+      } catch (e) {
+        // fallback
+      }
     }
   }
 
