@@ -17,7 +17,7 @@ const rakkas = Rakkas({
 
 
 export const metadata: Metadata = {
-  title: "ليرن وايز — مسارات تعليمية مركزة تصنع الفارق",
+  title: "مسارات تعليمية مركزة تصنع الفارق",
   description:
     "",
 };

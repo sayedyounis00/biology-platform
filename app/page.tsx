@@ -5,6 +5,7 @@ import ScrollVideoHero from "@/components/home/ScrollVideoHero";
 import ParallaxSection from "@/components/home/ParallaxSection";
 import { supabase, createClient } from "@/lib/supabase/server";
 import type { Course } from "@/types";
+import { redirect } from "next/navigation";
 
 async function getData(): Promise<{
   courseCount: number;
@@ -39,7 +40,6 @@ async function getData(): Promise<{
 }
 
 export default async function Home() {
-  const { courseCount, featuredCourses } = await getData();
   const supabaseClient = await createClient();
   
   let user = null;
@@ -49,6 +49,12 @@ export default async function Home() {
   } catch (error) {
     console.error("Error fetching user session on homepage:", error);
   }
+
+  if (user) {
+    redirect("/dashboard");
+  }
+
+  const { courseCount, featuredCourses } = await getData();
 
   let userYearOrderIndex: number | null = null;
   if (user) {
