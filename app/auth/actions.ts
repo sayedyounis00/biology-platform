@@ -157,6 +157,48 @@ export async function updateProfile(formData: FormData) {
     redirect("/profile?error=" + encodeURIComponent(error.message));
   }
 
+  // Auto-enroll in free courses of the selected year
+  if (yearId) {
+    try {
+      const { data: freeCourses, error: coursesError } = await supabase
+        .from("courses")
+        .select("id")
+        .eq("year_id", yearId)
+        .eq("is_published", true)
+        .or("price.eq.0,price.is.null");
+
+      if (coursesError) {
+        console.error("Error fetching free courses:", coursesError);
+      } else if (freeCourses && freeCourses.length > 0) {
+        // Get existing enrollments for this user to avoid duplicates
+        const { data: existingEnrollments } = await supabase
+          .from("enrollments")
+          .select("course_id")
+          .eq("user_id", user.id);
+
+        const existingCourseIds = new Set(existingEnrollments?.map(e => e.course_id) || []);
+        const toEnroll = freeCourses.filter(c => !existingCourseIds.has(c.id));
+
+        if (toEnroll.length > 0) {
+          const insertData = toEnroll.map(c => ({
+            user_id: user.id,
+            course_id: c.id,
+          }));
+
+          const { error: enrollError } = await supabase
+            .from("enrollments")
+            .insert(insertData);
+
+          if (enrollError) {
+            console.error("Error inserting auto-enrollments:", enrollError);
+          }
+        }
+      }
+    } catch (err) {
+      console.error("Unexpected error in auto-enrollment:", err);
+    }
+  }
+
   await supabase.auth.updateUser({
     data: {
       full_name: fullName,
