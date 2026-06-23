@@ -1,41 +1,27 @@
 import Link from "next/link";
 import Navbar from "@/components/layout/Navbar";
-import CourseCard from "@/components/courses/CourseCard";
 import ScrollVideoHero from "@/components/home/ScrollVideoHero";
 import ParallaxSection from "@/components/home/ParallaxSection";
 import { supabase, createClient } from "@/lib/supabase/server";
-import type { Course } from "@/types";
 import { redirect } from "next/navigation";
 
-async function getData(): Promise<{
-  courseCount: number;
-  featuredCourses: Course[];
-}> {
+async function getData(): Promise<{ courseCount: number }> {
   if (!supabase) {
-    return { courseCount: 0, featuredCourses: [] };
+    return { courseCount: 0 };
   }
 
   try {
-    const [countResult, coursesResult] = await Promise.all([
-      supabase
-        .from("courses")
-        .select("*", { count: "exact", head: true })
-        .eq("is_published", true),
-      supabase
-        .from("courses")
-        .select("*")
-        .eq("is_published", true)
-        .order("created_at", { ascending: false })
-        .limit(3),
-    ]);
+    const countResult = await supabase
+      .from("courses")
+      .select("*", { count: "exact", head: true })
+      .eq("is_published", true);
 
     return {
       courseCount: countResult.count ?? 0,
-      featuredCourses: (coursesResult.data as Course[]) ?? [],
     };
   } catch (error) {
     console.error("Error fetching homepage data from Supabase:", error);
-    return { courseCount: 0, featuredCourses: [] };
+    return { courseCount: 0 };
   }
 }
 
@@ -54,31 +40,7 @@ export default async function Home() {
     redirect("/dashboard");
   }
 
-  const { courseCount, featuredCourses } = await getData();
-
-  let userYearOrderIndex: number | null = null;
-  if (user) {
-    try {
-      const { data: profile } = await supabaseClient
-        .from("profiles")
-        .select("current_year_id")
-        .eq("id", user.id)
-        .maybeSingle();
-
-      if (profile?.current_year_id) {
-        const { data: year } = await supabaseClient
-          .from("years")
-          .select("order_index")
-          .eq("id", profile.current_year_id)
-          .maybeSingle();
-        if (year) {
-          userYearOrderIndex = year.order_index;
-        }
-      }
-    } catch (error) {
-      console.error("Error fetching user profile/year on homepage:", error);
-    }
-  }
+  const { courseCount } = await getData();
 
   return (
     <>
@@ -115,21 +77,19 @@ export default async function Home() {
                   >
                     تصفح الكورسات
                   </Link>
-                  {!user && (
-                    <Link
-                      href="/register"
-                      id="hero-signup-cta"
-                      className="inline-flex items-center justify-center px-6 py-3.5 rounded-full border border-white/10 text-[#F0EDE6]/80 text-sm font-semibold hover:border-[#FBBF24]/30 hover:text-white transition-all duration-300"
+                  <Link
+                    href="/register"
+                    id="hero-signup-cta"
+                    className="inline-flex items-center justify-center px-6 py-3.5 rounded-full border border-white/10 text-[#F0EDE6]/80 text-sm font-semibold hover:border-[#FBBF24]/30 hover:text-white transition-all duration-300"
+                  >
+                    ابدأ مجاناً
+                    <span
+                      aria-hidden="true"
+                      className="mr-1.5 transition-transform duration-300 hover:-translate-x-1"
                     >
-                      ابدأ مجاناً
-                      <span
-                        aria-hidden="true"
-                        className="mr-1.5 transition-transform duration-300 hover:-translate-x-1"
-                      >
-                        ←
-                      </span>
-                    </Link>
-                  )}
+                      ←
+                    </span>
+                  </Link>
                 </div>
               </div>
 
@@ -221,14 +181,14 @@ export default async function Home() {
             {/* Section header */}
             <div className="text-center mb-12 border-b border-[#ffffff08] pb-6">
               <h2 className="font-gravity text-3xl font-extrabold tracking-tight">
-                {userYearOrderIndex ? "دروسك" : "اختار الصف الدراسي"}
+                اختار الصف الدراسي
               </h2>
             </div>
 
             {/* Grid of three grade levels matching the uploaded image design */}
-            <div className={`grid grid-cols-1 ${userYearOrderIndex ? "max-w-md mx-auto" : "md:grid-cols-3"} gap-8`}>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
               {/* Card 1 — الصف الدراسي الأول */}
-              {(!userYearOrderIndex || userYearOrderIndex === 1) && (
+              {/* Card 1 */}
                 <Link
                   href="/courses?grade=1"
                   className="group block rounded-2xl bg-[#101725] border border-white/10 overflow-hidden transition-all duration-300 hover:border-teal-500/40 hover:shadow-[0_12px_40px_rgba(13,148,136,0.15)]"
@@ -253,10 +213,10 @@ export default async function Home() {
                     </p>
                   </div>
                 </Link>
-              )}
+
 
               {/* Card 2 — الصف الدراسي الثاني */}
-              {(!userYearOrderIndex || userYearOrderIndex === 2) && (
+              {/* Card 2 */}
                 <Link
                   href="/courses?grade=2"
                   className="group block rounded-2xl bg-[#101725] border border-white/10 overflow-hidden transition-all duration-300 hover:border-teal-500/40 hover:shadow-[0_12px_40px_rgba(13,148,136,0.15)]"
@@ -281,10 +241,10 @@ export default async function Home() {
                     </p>
                   </div>
                 </Link>
-              )}
+
 
               {/* Card 3 — الصف الدراسي الثالث */}
-              {(!userYearOrderIndex || userYearOrderIndex === 3) && (
+              {/* Card 3 */}
                 <Link
                   href="/courses?grade=3"
                   className="group block rounded-2xl bg-[#101725] border border-white/10 overflow-hidden transition-all duration-300 hover:border-teal-500/40 hover:shadow-[0_12px_40px_rgba(13,148,136,0.15)]"
@@ -309,7 +269,7 @@ export default async function Home() {
                     </p>
                   </div>
                 </Link>
-              )}
+
             </div>
           </div>
         </ParallaxSection>
