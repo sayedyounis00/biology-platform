@@ -112,7 +112,7 @@ function RegisterContent() {
         {/* Logo / Header */}
         <div className="text-center mb-8">
           <Link href="/" className="inline-block mb-4">
-            <span className="font-gravity text-3xl">ليرن وايز</span>
+            <span className="font-gravity text-3xl">م/احمد سعد</span>
           </Link>
           <h1 className="text-2xl font-bold text-[#F0EDE6] mb-2">
             إنشاء حساب جديد
