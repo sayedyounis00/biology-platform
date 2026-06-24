@@ -16,75 +16,94 @@ export default async function LessonDetailPage({
 
   const supabaseClient = await createClient();
 
-  // Get current user
-  const { data: { user } } = await supabaseClient.auth.getUser();
-  if (!user) {
-    redirect("/login");
-  }
+  // Step 1: Fetch user, course details, current lesson details, and all lessons in parallel
+  let course: Course;
+  let lesson: Lesson;
+  let allLessons: Lesson[] = [];
+  let user = null;
 
-  // Get the course details
-  const { data: courseData, error: courseError } = await supabaseClient
-    .from("courses")
-    .select("id, title, description, price, is_published")
-    .eq("id", id)
-    .single();
+  try {
+    const [userRes, courseRes, lessonRes, allLessonsRes] = await Promise.all([
+      supabaseClient.auth.getUser(),
+      supabaseClient
+        .from("courses")
+        .select("id, title, description, price, is_published")
+        .eq("id", id)
+        .single(),
+      supabaseClient
+        .from("lessons")
+        .select("id, course_id, title, content, video_url, order_index, created_at")
+        .eq("id", lessonId)
+        .eq("course_id", id)
+        .single(),
+      supabaseClient
+        .from("lessons")
+        .select("id, title, order_index, created_at, video_url")
+        .eq("course_id", id)
+        .order("order_index", { ascending: true })
+    ]);
 
-  if (courseError || !courseData) {
+    user = userRes.data?.user || null;
+    if (!user) {
+      redirect("/login");
+    }
+
+    if (courseRes.error || !courseRes.data) {
+      notFound();
+    }
+    course = courseRes.data as Course;
+
+    if (!course.is_published) {
+      notFound();
+    }
+
+    if (lessonRes.error || !lessonRes.data) {
+      notFound();
+    }
+    lesson = lessonRes.data as Lesson;
+
+    allLessons = (allLessonsRes.data || []) as Lesson[];
+  } catch (error) {
+    console.error("Error in parallel fetch Step 1 on lesson page:", error);
     notFound();
   }
 
-  const course = courseData as Course;
+  // Step 2: Fetch enrollment check and lesson progress in parallel
+  let initialCompletedLessonIds: string[] = [];
 
-  if (!course.is_published) {
-    notFound();
-  }
+  try {
+    const enrollmentPromise = (course.price && course.price > 0)
+      ? supabaseClient
+          .from("enrollments")
+          .select("id")
+          .eq("user_id", user.id)
+          .eq("course_id", course.id)
+          .maybeSingle()
+      : Promise.resolve({ data: { id: "free" }, error: null });
 
-  // If the course is paid, protect access via enrollment check
-  if (course.price && course.price > 0) {
-    const { data: enrollmentData } = await supabaseClient
-      .from("enrollments")
-      .select("id")
-      .eq("user_id", user.id)
-      .eq("course_id", course.id)
-      .maybeSingle();
+    const progressPromise = allLessons.length > 0
+      ? supabaseClient
+          .from("lesson_progress")
+          .select("lesson_id")
+          .eq("user_id", user.id)
+          .in("lesson_id", allLessons.map((l) => l.id))
+          .eq("completed", true)
+      : Promise.resolve({ data: [], error: null });
 
-    if (!enrollmentData) {
+    const [enrollmentRes, progressRes] = await Promise.all([
+      enrollmentPromise,
+      progressPromise
+    ]);
+
+    // If the course is paid, protect access via enrollment check
+    if (course.price && course.price > 0 && (!enrollmentRes.data || enrollmentRes.error)) {
       redirect(`/courses/${rawId}/payment`);
     }
+
+    initialCompletedLessonIds = (progressRes.data || []).map((p) => p.lesson_id);
+  } catch (error) {
+    console.error("Error in parallel fetch Step 2 on lesson page:", error);
   }
-
-  // Get the current lesson details
-  const { data: lessonData, error: lessonError } = await supabaseClient
-    .from("lessons")
-    .select("id, course_id, title, content, video_url, order_index, created_at")
-    .eq("id", lessonId)
-    .eq("course_id", course.id)
-    .single();
-
-  if (lessonError || !lessonData) {
-    notFound();
-  }
-
-  const lesson = lessonData as Lesson;
-
-  // Get all lessons for the sidebar navigation
-  const { data: allLessonsData } = await supabaseClient
-    .from("lessons")
-    .select("id, title, order_index, created_at, video_url")
-    .eq("course_id", course.id)
-    .order("order_index", { ascending: true });
-
-  const allLessons = (allLessonsData || []) as Lesson[];
-
-  // Fetch completed lessons for the current user in this course
-  const { data: progressData } = await supabaseClient
-    .from("lesson_progress")
-    .select("lesson_id")
-    .eq("user_id", user.id)
-    .in("lesson_id", allLessons.map((l) => l.id))
-    .eq("completed", true);
-
-  const initialCompletedLessonIds = (progressData || []).map((p) => p.lesson_id);
 
   // Base64 encode the video URL to prevent raw link showing in View Source
   const encodedVideoUrl = lesson.video_url

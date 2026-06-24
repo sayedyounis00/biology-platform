@@ -20,38 +20,34 @@ export default async function PaymentPage({
 
   const supabaseClient = await createClient();
 
-  // Get the current user
   let user = null;
-  try {
-    const { data } = await supabaseClient.auth.getUser();
-    user = data?.user || null;
-  } catch (e) {
-    console.error("Error checking user in payment page:", e);
-  }
-
-  if (!user) {
-    redirect("/login");
-  }
-
-  // Get the course details
   let course: Course;
-  try {
-    const { data: courseData, error: courseError } = await supabaseClient
-      .from("courses")
-      .select("id, title, description, price, is_published")
-      .eq("id", id)
-      .single();
 
-    if (courseError || !courseData) {
+  try {
+    const [userRes, courseRes] = await Promise.all([
+      supabaseClient.auth.getUser(),
+      supabaseClient
+        .from("courses")
+        .select("id, title, description, price, is_published")
+        .eq("id", id)
+        .single()
+    ]);
+
+    user = userRes.data?.user || null;
+    if (!user) {
+      redirect("/login");
+    }
+
+    if (courseRes.error || !courseRes.data) {
       notFound();
     }
-    course = courseData as Course;
-  } catch (error) {
-    console.error("Error fetching course details on payment page:", error);
-    notFound();
-  }
+    course = courseRes.data as Course;
 
-  if (!course.is_published) {
+    if (!course.is_published) {
+      notFound();
+    }
+  } catch (e) {
+    console.error("Error in parallel fetch Step 1 on payment page:", e);
     notFound();
   }
 

@@ -25,32 +25,21 @@ export default async function ProfilePage({
   }
 
   let profile = null;
-  try {
-    const { data } = await supabase
-      .from("profiles")
-      .select("*")
-      .eq("id", user.id)
-      .single();
-    profile = data;
-  } catch (error) {
-    console.error("Error fetching user profile details:", error);
-  }
-
   let years: any[] = [];
-  try {
-    const { data } = await supabase
-      .from("years")
-      .select("id, title")
-      .order("order_index", { ascending: true });
-    years = data || [];
-  } catch (error) {
-    console.error("Error fetching years list on profile page:", error);
-  }
-
   let enrolledCourses: any[] = [];
-  if (user) {
-    try {
-      const { data, error } = await supabase
+
+  try {
+    const [profileResult, yearsResult, enrollmentsResult] = await Promise.all([
+      supabase
+        .from("profiles")
+        .select("*")
+        .eq("id", user.id)
+        .single(),
+      supabase
+        .from("years")
+        .select("id, title")
+        .order("order_index", { ascending: true }),
+      supabase
         .from("enrollments")
         .select(`
           course_id,
@@ -64,16 +53,28 @@ export default async function ProfilePage({
           )
         `)
         .eq("user_id", user.id)
-        .order("enrolled_at", { ascending: false });
-        
-      if (error) {
-        console.error("Error fetching enrolled courses for profile:", error);
-      } else {
-        enrolledCourses = data || [];
-      }
-    } catch (e) {
-      console.error("Error catching enrolled courses fetch:", e);
+        .order("enrolled_at", { ascending: false })
+    ]);
+
+    if (profileResult.error) {
+      console.error("Error fetching user profile details:", profileResult.error);
+    } else {
+      profile = profileResult.data;
     }
+
+    if (yearsResult.error) {
+      console.error("Error fetching years list on profile page:", yearsResult.error);
+    } else {
+      years = yearsResult.data || [];
+    }
+
+    if (enrollmentsResult.error) {
+      console.error("Error fetching enrolled courses for profile:", enrollmentsResult.error);
+    } else {
+      enrolledCourses = enrollmentsResult.data || [];
+    }
+  } catch (error) {
+    console.error("Error in parallel database fetch on profile page:", error);
   }
 
   const subscribedCourses = enrolledCourses

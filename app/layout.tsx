@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Cairo, Rakkas } from "next/font/google";
 import "./globals.css";
 
@@ -16,10 +16,48 @@ const rakkas = Rakkas({
 });
 
 
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 5,
+  userScalable: true,
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#ffffff" },
+    { media: "(prefers-color-scheme: dark)", color: "#0f1623" },
+  ],
+};
+
 export const metadata: Metadata = {
-  title: "مسارات تعليمية مركزة تصنع الفارق",
+  metadataBase: new URL("https://ahmedsaad-biology.com"),
+  title: {
+    default: "منصة مستر أحمد سعد للأحياء",
+    template: "%s | منصة مستر أحمد سعد للأحياء",
+  },
   description:
-    "",
+    "المنصة التعليمية الأولى لتبسيط مادة الأحياء لطلاب الثانوية العامة في بسيون - دروس مكثفة ومتابعة مستمرة مع مستر أحمد سعد.",
+  keywords: ["أحياء", "ثانوية عامة", "مستر أحمد سعد", "منصة أحياء", "بسيون", "تعليم أحياء"],
+  openGraph: {
+    type: "website",
+    locale: "ar_EG",
+    url: "https://ahmedsaad-biology.com",
+    siteName: "منصة مستر أحمد سعد للأحياء",
+    title: "منصة مستر أحمد سعد للأحياء",
+    description: "المنصة التعليمية الأولى لتبسيط مادة الأحياء لطلاب الثانوية العامة في بسيون - دروس مكثفة ومتابعة مستمرة مع مستر أحمد سعد.",
+    images: [{ url: "/og-image.png", width: 1200, height: 630, alt: "منصة مستر أحمد سعد للأحياء" }],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "منصة مستر أحمد سعد للأحياء",
+    description: "المنصة التعليمية الأولى لتبسيط مادة الأحياء لطلاب الثانوية العامة في بسيون - دروس مكثفة ومتابعة مستمرة مع مستر أحمد سعد.",
+    images: ["/og-image.png"],
+  },
+  alternates: {
+    canonical: "/",
+  },
+  robots: {
+    index: true,
+    follow: true,
+  },
 };
 
 export default function RootLayout({

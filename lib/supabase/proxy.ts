@@ -19,8 +19,8 @@ export async function updateSession(request: NextRequest) {
           return request.cookies.getAll();
         },
         setAll(cookiesToSet, headers) {
-          cookiesToSet.forEach(({ name, value }) =>
-            request.cookies.set(name, value)
+          cookiesToSet.forEach(({ name, value, options }) =>
+            request.cookies.set({ name, value, ...options })
           );
           supabaseResponse = NextResponse.next({
             request,
@@ -37,7 +37,7 @@ export async function updateSession(request: NextRequest) {
   );
 
   // IMPORTANT: Do not run code between createServerClient and
-  // supabase.auth.getClaims(). A simple mistake could make it very hard
+  // supabase.auth.getUser(). A simple mistake could make it very hard
   // to debug issues with users being randomly logged out.
   // We only run this if there is actually a session cookie or auth header present,
   // to avoid hitting timeouts for non-logged-in users. We also wrap it in try/catch.
@@ -48,7 +48,7 @@ export async function updateSession(request: NextRequest) {
     const hasAuthHeader = !!request.headers.get("Authorization");
 
     if (hasAuthCookie || hasAuthHeader) {
-      await supabase.auth.getClaims();
+      await supabase.auth.getUser();
     }
   } catch (error) {
     console.error("Supabase session refresh failed in proxy middleware:", error);

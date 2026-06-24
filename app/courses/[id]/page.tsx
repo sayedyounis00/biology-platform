@@ -32,35 +32,49 @@ export default async function CourseLessonsPage({
     );
   }
 
-  // Fetch the course details
-  let course: Course;
-  try {
-    const { data: courseData, error: courseError } = await supabase
-      .from("courses")
-      .select("id, title, description, thumbnail_url, price, is_published, created_at")
-      .eq("id", id)
-      .single();
+  const supabaseClient = await createClient();
 
-    if (courseError || !courseData) {
+  // Fetch course details, lessons, and user session in parallel
+  let course: Course;
+  let lessons: Lesson[] = [];
+  let lessonsErrorOccurred = false;
+  let user = null;
+
+  try {
+    const [courseResult, lessonsResult, userResult] = await Promise.all([
+      supabase
+        .from("courses")
+        .select("id, title, description, thumbnail_url, price, is_published, created_at")
+        .eq("id", id)
+        .single(),
+      supabase
+        .from("lessons")
+        .select("id, course_id, title, content, video_url, order_index, created_at")
+        .eq("course_id", id)
+        .order("created_at", { ascending: false }),
+      supabaseClient.auth.getUser()
+    ]);
+
+    if (courseResult.error || !courseResult.data) {
       notFound();
     }
-    course = courseData as Course;
+    course = courseResult.data as Course;
+
+    if (lessonsResult.error) {
+      console.error("Error fetching lessons for course ID:", id, lessonsResult.error);
+      lessonsErrorOccurred = true;
+    } else {
+      lessons = (lessonsResult.data as Lesson[]) || [];
+    }
+
+    user = userResult.data?.user || null;
   } catch (error) {
-    console.error("Error fetching course in lessons page:", error);
+    console.error("Error in parallel database fetch on course page:", error);
     notFound();
   }
 
   // If the course is paid, protect access via enrollment check
   if (course.price && course.price > 0) {
-    const supabaseClient = await createClient();
-    let user = null;
-    try {
-      const { data } = await supabaseClient.auth.getUser();
-      user = data?.user || null;
-    } catch (e) {
-      console.error("Error checking user session in course lessons page:", e);
-    }
-
     if (!user) {
       redirect("/register");
     }
@@ -81,28 +95,6 @@ export default async function CourseLessonsPage({
     if (!enrollmentData) {
       redirect(`/courses/${rawId}/payment`);
     }
-  }
-
-  // Fetch lessons ordered by created_at descending (newest to oldest)
-  let lessons: Lesson[] = [];
-  let lessonsErrorOccurred = false;
-
-  try {
-    const { data: lessonsData, error: lessonsError } = await supabase
-      .from("lessons")
-      .select("id, course_id, title, content, video_url, order_index, created_at")
-      .eq("course_id", id)
-      .order("created_at", { ascending: false });
-
-    if (lessonsError) {
-      console.error("Error fetching lessons for course ID:", id, lessonsError);
-      lessonsErrorOccurred = true;
-    } else {
-      lessons = (lessonsData as Lesson[]) || [];
-    }
-  } catch (error) {
-    console.error("Error fetching lessons from Supabase:", error);
-    lessonsErrorOccurred = true;
   }
 
   return (

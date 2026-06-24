@@ -20,42 +20,45 @@ export default async function DashboardPage() {
   }
 
   let profile = null;
-  try {
-    const { data } = await supabase
-      .from("profiles")
-      .select("*")
-      .eq("id", user.id)
-      .single();
-    profile = data;
-  } catch (error) {
-    console.error("Error fetching user profile details on dashboard:", error);
-  }
-
   let enrolledCourses: any[] = [];
+
   try {
-    const { data, error } = await supabase
-      .from("enrollments")
-      .select(`
-        course_id,
-        enrolled_at,
-        courses (
-          id,
-          title,
-          description,
-          thumbnail_url,
-          price
-        )
-      `)
-      .eq("user_id", user.id)
-      .order("enrolled_at", { ascending: false });
-      
-    if (error) {
-      console.error("Error fetching enrolled courses for dashboard:", error);
+    const [profileResult, enrollmentsResult] = await Promise.all([
+      supabase
+        .from("profiles")
+        .select("*")
+        .eq("id", user.id)
+        .single(),
+      supabase
+        .from("enrollments")
+        .select(`
+          course_id,
+          enrolled_at,
+          courses (
+            id,
+            title,
+            description,
+            thumbnail_url,
+            price
+          )
+        `)
+        .eq("user_id", user.id)
+        .order("enrolled_at", { ascending: false })
+    ]);
+
+    if (profileResult.error) {
+      console.error("Error fetching user profile details on dashboard:", profileResult.error);
     } else {
-      enrolledCourses = data || [];
+      profile = profileResult.data;
     }
-  } catch (e) {
-    console.error("Error catching enrolled courses fetch:", e);
+
+    if (enrollmentsResult.error) {
+      console.error("Error fetching enrolled courses for dashboard:", enrollmentsResult.error);
+    } else {
+      enrolledCourses = enrollmentsResult.data || [];
+    }
+  } catch (error) {
+    console.error("Error in parallel database fetch on dashboard page:", error);
   }
 
   const subscribedCourses = enrolledCourses
