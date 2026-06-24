@@ -89,13 +89,24 @@ export default async function DashboardPage() {
 
           {/* Subscribed Courses Section */}
           <div className="bg-[#1A2235]/90 rounded-2xl border border-white/10 p-8 shadow-2xl shadow-black/25 backdrop-blur-md">
-            <div className="flex items-center justify-between mb-8">
-              <span className="px-4 py-1.5 rounded-full text-sm font-semibold bg-[#FBBF24]/10 text-[#FBBF24]">
-                {subscribedCourses.length} {subscribedCourses.length === 1 ? "كورس" : "كورسات"}
-              </span>
-              <h2 className="text-2xl font-bold text-[#F0EDE6]">
-                كورساتي
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
+              <h2 className="text-2xl font-bold text-[#F0EDE6] order-1 sm:order-2">
+                كورساتي المشترك بها
               </h2>
+              <div className="flex flex-wrap items-center gap-3 order-2 sm:order-1">
+                <span className="px-4 py-1.5 rounded-full text-sm font-semibold bg-[#FBBF24]/10 text-[#FBBF24]">
+                  {subscribedCourses.length} {subscribedCourses.length === 1 ? "كورس" : "كورسات"}
+                </span>
+                <Link
+                  href="/courses"
+                  className="inline-flex items-center gap-2 px-4 py-1.5 rounded-xl text-sm font-bold bg-[#C0E838] text-[#0F1623] hover:bg-[#b0d530] transition-all duration-300 shadow-[0_4px_12px_rgba(192,232,56,0.15)] hover:shadow-[0_6px_20px_rgba(192,232,56,0.25)] cursor-pointer"
+                >
+                  <span>تصفح الكورسات الجديدة</span>
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-4 h-4 rtl:rotate-180">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
+                  </svg>
+                </Link>
+              </div>
             </div>
 
             {subscribedCourses.length === 0 ? (
