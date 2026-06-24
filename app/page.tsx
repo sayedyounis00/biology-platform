@@ -27,7 +27,7 @@ async function getData(): Promise<{ courseCount: number }> {
 
 export default async function Home() {
   const supabaseClient = await createClient();
-  
+
   let user = null;
   try {
     const { data } = await supabaseClient.auth.getUser();
@@ -57,12 +57,11 @@ export default async function Home() {
                 <h1 className="text-4xl md:text-5xl lg:text-[3.5rem] leading-[1.2] font-extrabold text-[#F0EDE6] tracking-tight">
                   منصه <br />
                   <span
-                    className="font-light italic pl-1 text-[#FBBF24]/90"
-                    style={{ fontFamily: "Georgia, serif" }}
+                    className="bdeen pl-1 text-[#FBBF24]/90"
                   >
                     الاحياء
                   </span>{" "}
-                  <br className="hidden sm:block" />
+                  <br className="lalezar-regular" />
                   الاولي في بسيون                </h1>
 
                 <p className="text-[#F0EDE6]/60 text-lg leading-relaxed max-w-lg font-light">
@@ -92,33 +91,6 @@ export default async function Home() {
                   </Link>
                 </div>
               </div>
-
-              {/* Column 2 — Stats Card */}
-              <div className="flex justify-center lg:justify-start">
-                <div className="relative w-full max-w-sm rounded-2xl bg-[#1A2235]/75 backdrop-blur-md border border-white/10 p-8 flex flex-col gap-6 shadow-[0_20px_50px_rgba(0,0,0,0.4)] hover:border-[#FBBF24]/30 hover:shadow-[0_20px_50px_rgba(251,191,36,0.05)] transition-all duration-500 group">
-                  <div className="flex flex-col gap-1">
-                    <span className="text-[#FBBF24] text-5xl font-extrabold tracking-tight tabular-nums transition-transform duration-500 group-hover:scale-105 origin-right">
-                      {courseCount}
-                    </span>
-                    <span className="text-[#F0EDE6]/50 text-xs font-semibold uppercase tracking-[0.15em] mt-1">
-                      دورة تعليمية منشورة
-                    </span>
-                  </div>
-
-                  <div className="h-px bg-white/10" />
-
-                  <blockquote className="flex flex-col gap-3">
-                    <p className="text-[#F0EDE6]/80 text-sm leading-relaxed italic font-light">
-                      &ldquo;لا أنشر أي دورة تعليمية إلا بعد أن أتأكد تماماً من
-                      أنها ستوفر عليك وقتاً أطول بكثير من وقت
-                      دراستها.&rdquo;
-                    </p>
-                    <cite className="text-[#F0EDE6]/40 text-xs font-mono not-italic uppercase tracking-wider">
-                      — احمد سعد
-                    </cite>
-                  </blockquote>
-                </div>
-              </div>
             </div>
           </div>
         </ScrollVideoHero>
@@ -129,7 +101,7 @@ export default async function Home() {
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16 items-center">
               {/* Column 1 — Text content (Right in RTL / first in JSX) */}
               <div className="lg:col-span-7 flex flex-col items-center lg:items-start text-center lg:text-right gap-6">
-                <h2 className="badeen-display-regular text-[#C0E838] text-4xl md:text-5xl font-extrabold tracking-tight">
+                <h2 className="badeen-display-regular text-[#FBBF24] text-4xl md:text-5xl font-extrabold tracking-tight">
                   ذاكر واكسب
                 </h2>
                 <p className="text-[#F0EDE6]/80 text-lg md:text-xl leading-relaxed font-medium max-w-2xl">
@@ -138,7 +110,7 @@ export default async function Home() {
                 <Link
                   href="/"
                   id="study-win-cta"
-                  className="inline-flex items-center justify-center px-8 py-3.5 rounded-lg bg-[#C0E838] text-[#0F1623] text-base font-bold hover:bg-[#b0d530] transition-colors duration-300 shadow-[0_4px_20px_rgba(192,232,56,0.25)]"
+                  className="inline-flex items-center justify-center px-8 py-3.5 rounded-lg bg-[#FBBF24] text-[#0F1623] text-base font-bold hover:bg-[#FBBF24] transition-colors duration-300 shadow-[0_4px_20px_rgba(192,232,56,0.25)]"
                 >
                   جرب الآن               </Link>
               </div>
@@ -180,7 +152,7 @@ export default async function Home() {
           <div className="mx-auto max-w-6xl px-6">
             {/* Section header */}
             <div className="text-center mb-12 border-b border-[#ffffff08] pb-6">
-              <h2 className="font-gravity text-3xl font-extrabold tracking-tight">
+              <h2 className="badeen-display-regular text-3xl font-extrabold tracking-tight">
                 اختار الصف الدراسي
               </h2>
             </div>
@@ -189,86 +161,83 @@ export default async function Home() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
               {/* Card 1 — الصف الدراسي الأول */}
               {/* Card 1 */}
-                <Link
-                  href="/courses?grade=1"
-                  className="group block rounded-2xl bg-[#101725] border border-white/10 overflow-hidden transition-all duration-300 hover:border-teal-500/40 hover:shadow-[0_12px_40px_rgba(13,148,136,0.15)]"
-                >
-                  {/* Thumbnail */}
-                  <div className="aspect-[4/3] relative overflow-hidden bg-[#0A0E17]">
-                    <img
-                      src="/biology_grade1.png"
-                      alt="الصف الدراسي الأول"
-                      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                    />
-                  </div>
+              <Link
+                href="/courses?grade=1"
+                className="group block rounded-2xl bg-[#101725] border border-white/10 overflow-hidden transition-all duration-300 hover:border-teal-500/40 hover:shadow-[0_12px_40px_rgba(13,148,136,0.15)]"
+              >
+                {/* Thumbnail */}
+                <div className="aspect-[4/3] relative overflow-hidden bg-[#0A0E17]">
+                  <img
+                    src="/biology_grade1.png"
+                    alt="الصف الدراسي الأول"
+                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                  />
+                </div>
 
-                  {/* Content Box */}
-                  <div className="p-6 text-right flex flex-col gap-4">
-                    <h3 className="text-[#F0EDE6] text-xl font-bold font-sans">
-                      الصف الدراسي الأول
-                    </h3>
-                    <div className="h-[2px] w-full bg-teal-600/80 transition-colors group-hover:bg-teal-400" />
-                    <p className="text-[#F0EDE6]/60 text-sm font-medium">
-                      جميع كورسات الصف الأول الثانوي
-                    </p>
-                  </div>
-                </Link>
+                {/* Content Box */}
+                <div className="p-6 text-right flex flex-col gap-4">
+                  <h3 className="text-[#F0EDE6] text-xl font-bold font-sans">
+                    الصف الأول الثانوي                  </h3>
+                  <div className="h-[2px] w-full bg-teal-600/80 transition-colors group-hover:bg-teal-400" />
+                  <p className="text-[#F0EDE6]/60 text-sm font-medium">
+                    جميع كورسات الصف الأول الثانوي
+                  </p>
+                </div>
+              </Link>
 
 
               {/* Card 2 — الصف الدراسي الثاني */}
               {/* Card 2 */}
-                <Link
-                  href="/courses?grade=2"
-                  className="group block rounded-2xl bg-[#101725] border border-white/10 overflow-hidden transition-all duration-300 hover:border-teal-500/40 hover:shadow-[0_12px_40px_rgba(13,148,136,0.15)]"
-                >
-                  {/* Thumbnail */}
-                  <div className="aspect-[4/3] relative overflow-hidden bg-[#0A0E17]">
-                    <img
-                      src="/biology_grade2.png"
-                      alt="الصف الدراسي الثاني"
-                      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                    />
-                  </div>
+              <Link
+                href="/courses?grade=2"
+                className="group block rounded-2xl bg-[#101725] border border-white/10 overflow-hidden transition-all duration-300 hover:border-teal-500/40 hover:shadow-[0_12px_40px_rgba(13,148,136,0.15)]"
+              >
+                {/* Thumbnail */}
+                <div className="aspect-[4/3] relative overflow-hidden bg-[#0A0E17]">
+                  <img
+                    src="/biology_grade2.png"
+                    alt="الصف الدراسي الثاني"
+                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                  />
+                </div>
 
-                  {/* Content Box */}
-                  <div className="p-6 text-right flex flex-col gap-4">
-                    <h3 className="text-[#F0EDE6] text-xl font-bold font-sans">
-                      الصف الدراسي الثاني
-                    </h3>
-                    <div className="h-[2px] w-full bg-teal-600/80 transition-colors group-hover:bg-teal-400" />
-                    <p className="text-[#F0EDE6]/60 text-sm font-medium">
-                      جميع كورسات الصف الثاني الثانوي
-                    </p>
-                  </div>
-                </Link>
+                {/* Content Box */}
+                <div className="p-6 text-right flex flex-col gap-4">
+                  <h3 className="text-[#F0EDE6] text-xl font-bold font-sans">
+                    الصف الثاني الثانوي                  </h3>
+                  <div className="h-[2px] w-full bg-teal-600/80 transition-colors group-hover:bg-teal-400" />
+                  <p className="text-[#F0EDE6]/60 text-sm font-medium">
+                    جميع كورسات الصف الثاني الثانوي
+                  </p>
+                </div>
+              </Link>
 
 
               {/* Card 3 — الصف الدراسي الثالث */}
               {/* Card 3 */}
-                <Link
-                  href="/courses?grade=3"
-                  className="group block rounded-2xl bg-[#101725] border border-white/10 overflow-hidden transition-all duration-300 hover:border-teal-500/40 hover:shadow-[0_12px_40px_rgba(13,148,136,0.15)]"
-                >
-                  {/* Thumbnail */}
-                  <div className="aspect-[4/3] relative overflow-hidden bg-[#0A0E17]">
-                    <img
-                      src="/biology_grade3.png"
-                      alt="الصف الدراسي الثالث"
-                      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                    />
-                  </div>
+              <Link
+                href="/courses?grade=3"
+                className="group block rounded-2xl bg-[#101725] border border-white/10 overflow-hidden transition-all duration-300 hover:border-teal-500/40 hover:shadow-[0_12px_40px_rgba(13,148,136,0.15)]"
+              >
+                {/* Thumbnail */}
+                <div className="aspect-[4/3] relative overflow-hidden bg-[#0A0E17]">
+                  <img
+                    src="/biology_grade3.png"
+                    alt="الصف الدراسي الثالث"
+                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                  />
+                </div>
 
-                  {/* Content Box */}
-                  <div className="p-6 text-right flex flex-col gap-4">
-                    <h3 className="text-[#F0EDE6] text-xl font-bold font-sans">
-                      الصف الدراسي الثالث
-                    </h3>
-                    <div className="h-[2px] w-full bg-teal-600/80 transition-colors group-hover:bg-teal-400" />
-                    <p className="text-[#F0EDE6]/60 text-sm font-medium">
-                      جميع كورسات الصف الثالث الثانوي
-                    </p>
-                  </div>
-                </Link>
+                {/* Content Box */}
+                <div className="p-6 text-right flex flex-col gap-4">
+                  <h3 className="text-[#F0EDE6] text-xl font-bold font-sans">
+                    الصف الثالث الثانوي                  </h3>
+                  <div className="h-[2px] w-full bg-teal-600/80 transition-colors group-hover:bg-teal-400" />
+                  <p className="text-[#F0EDE6]/60 text-sm font-medium">
+                    جميع كورسات الصف الثالث الثانوي
+                  </p>
+                </div>
+              </Link>
 
             </div>
           </div>
@@ -283,7 +252,7 @@ export default async function Home() {
         >
           <div className="mx-auto max-w-6xl px-6">
             <div className="text-center max-w-xl mx-auto mb-16">
-              <h2 className="badeen-display-regular  text-[#F0EDE6] text-3xl font-extrabold tracking-tight">
+              <h2 className="badeen-display-regular  text-[#FFFFF] text-4xl font-extrabold tracking-tight">
                 مصممه من اجل صناعه الاوائل              </h2>
             </div>
 

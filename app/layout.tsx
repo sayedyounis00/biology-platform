@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Cairo, Rakkas } from "next/font/google";
+import { Cairo, Rakkas, Amiri, Badeen_Display, Lalezar } from "next/font/google";
 import "./globals.css";
 
 const cairo = Cairo({
@@ -13,6 +13,29 @@ const rakkas = Rakkas({
   subsets: ["arabic"],
   display: "swap",
   variable: "--font-rakkas",
+});
+
+const amiri = Amiri({
+  weight: ["400", "700"],
+  style: ["normal", "italic"],
+  subsets: ["arabic"],
+  display: "swap",
+  variable: "--font-amiri",
+});
+
+const badeenDisplay = Badeen_Display({
+  weight: "400",
+  subsets: ["arabic"],
+  display: "swap",
+  variable: "--font-badeen-display",
+
+});
+
+const lalezar = Lalezar({
+  weight: "400",
+  subsets: ["arabic"],
+  display: "swap",
+  variable: "--font-lalezar",
 });
 
 
@@ -66,7 +89,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="ar" dir="rtl" className={`${cairo.variable} ${rakkas.variable} antialiased`}>
+    <html lang="ar" dir="rtl" className={`${cairo.variable} ${rakkas.variable} ${amiri.variable} ${badeenDisplay.variable} ${lalezar.variable} antialiased`}>
       <body className="min-h-screen flex flex-col bg-[#0F1623] text-[#F0EDE6] font-sans">
         {children}
       </body>

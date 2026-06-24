@@ -8,6 +8,9 @@
   --color-cream-muted: #F0EDE680;
   --color-amber: #FBBF24;
   --font-sans: var(--font-cairo), system-ui, -apple-system, sans-serif;
+  --font-amiri: var(--font-amiri), serif;
+  --font-badeen-display: var(--font-badeen-display), system-ui;
+  --font-lalezar: var(--font-lalezar), sans-serif;
 }
 
 /* Base styles */
@@ -150,7 +153,49 @@ body {
   letter-spacing: 0.02em;
 }
 .badeen-display-regular {
-  font-family: "Badeen Display", system-ui;
+  font-family: var(--font-badeen-display), "Badeen Display", system-ui;
+  font-weight: 400;
+  font-style: normal;
+  word-spacing: 0.12em;
+}
+
+.bdeen {
+  font-family: var(--font-badeen-display), "Badeen Display", system-ui;
+  font-weight: 400;
+  font-style: normal;
+  word-spacing: 0.12em;
+}
+
+/* Amiri Font Classes */
+.amiri-regular {
+  font-family: var(--font-amiri), "Amiri", serif;
   font-weight: 400;
   font-style: normal;
 }
+
+.amiri-bold {
+  font-family: var(--font-amiri), "Amiri", serif;
+  font-weight: 700;
+  font-style: normal;
+}
+
+.amiri-regular-italic {
+  font-family: var(--font-amiri), "Amiri", serif;
+  font-weight: 400;
+  font-style: italic;
+}
+
+.amiri-bold-italic {
+  font-family: var(--font-amiri), "Amiri", serif;
+  font-weight: 700;
+  font-style: italic;
+}
+
+/* Lalezar Font Class */
+.lalezar-regular {
+  font-family: var(--font-lalezar), "Lalezar", sans-serif;
+  font-weight: 400;
+  font-style: normal;
+}
+
+
