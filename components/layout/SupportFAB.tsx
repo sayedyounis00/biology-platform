@@ -6,25 +6,6 @@ import { createClient } from "@/lib/supabase/client";
 import { submitComplaint } from "@/app/actions/support";
 import { cn } from "@/lib/utils";
 
-// Cookie helpers
-function getCookie(name: string): string {
-  if (typeof document === "undefined") return "";
-  const value = `; ${document.cookie}`;
-  const parts = value.split(`; ${name}=`);
-  if (parts.length === 2) {
-    return decodeURIComponent(parts.pop()?.split(";").shift() || "");
-  }
-  return "";
-}
-
-function setCookie(name: string, value: string, days = 365) {
-  if (typeof document === "undefined") return;
-  const d = new Date();
-  d.setTime(d.getTime() + days * 24 * 60 * 60 * 1000);
-  const expires = `expires=${d.toUTCString()}`;
-  document.cookie = `${name}=${encodeURIComponent(value)}; ${expires}; path=/; SameSite=Lax`;
-}
-
 const WhatsAppIcon = (props: React.SVGProps<SVGSVGElement>) => (
   <svg
     viewBox="0 0 24 24"
@@ -39,14 +20,13 @@ export default function SupportFAB() {
   const [isOpen, setIsOpen] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [profileLoaded, setProfileLoaded] = useState(false);
-  
-  // Form states
+
+  // Profile display (read-only)
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
-  const [complaintText, setComplaintText] = useState("");
-  const [showManualInputs, setShowManualInputs] = useState(true);
 
-  // Status states
+  // Form states
+  const [complaintText, setComplaintText] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
@@ -70,7 +50,7 @@ export default function SupportFAB() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [isOpen]);
 
-  // Load user information on mount and check cookies
+  // Load user profile on mount
   useEffect(() => {
     const supabase = createClient();
 
@@ -79,7 +59,7 @@ export default function SupportFAB() {
         const { data: { user } } = await supabase.auth.getUser();
         if (user) {
           setIsLoggedIn(true);
-          // Query the profiles table for name and phone
+
           const { data: profile } = await supabase
             .from("profiles")
             .select("full_name, phone")
@@ -87,32 +67,13 @@ export default function SupportFAB() {
             .maybeSingle();
 
           if (profile) {
-            const profileName = profile.full_name || user.user_metadata?.full_name || "";
-            const profilePhone = profile.phone || "";
-            
-            if (profileName) setName(profileName);
-            if (profilePhone) setPhone(profilePhone);
-            
-            // If we have both name and phone, hide manual inputs
-            if (profileName && profilePhone) {
-              setShowManualInputs(false);
-            }
+            setName(profile.full_name || user.user_metadata?.full_name || "");
+            setPhone(profile.phone || "");
           } else {
-            // Logged in but no profile record yet, fall back to auth user info
-            const fallbackName = user.user_metadata?.full_name || user.email?.split("@")[0] || "";
-            if (fallbackName) setName(fallbackName);
+            setName(user.user_metadata?.full_name || user.email?.split("@")[0] || "");
           }
         } else {
-          // Not logged in, check cookies
-          const cookieName = getCookie("support_user_name");
-          const cookiePhone = getCookie("support_phone_number");
-          
-          if (cookieName) setName(cookieName);
-          if (cookiePhone) setPhone(cookiePhone);
-          
-          if (cookieName && cookiePhone) {
-            setShowManualInputs(false);
-          }
+          setIsLoggedIn(false);
         }
       } catch (err) {
         console.error("Error loading user profile in Support FAB:", err);
@@ -123,19 +84,14 @@ export default function SupportFAB() {
 
     fetchUserProfile();
 
-    // Listen for auth state changes to keep profile updated
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
         if (session?.user) {
           fetchUserProfile();
         } else {
           setIsLoggedIn(false);
-          // Load cookies on sign out
-          const cookieName = getCookie("support_user_name");
-          const cookiePhone = getCookie("support_phone_number");
-          setName(cookieName || "");
-          setPhone(cookiePhone || "");
-          setShowManualInputs(!(cookieName && cookiePhone));
+          setName("");
+          setPhone("");
         }
       }
     );
@@ -152,20 +108,7 @@ export default function SupportFAB() {
     setSuccess(false);
 
     const formData = new FormData();
-    
-    // Determine which name/phone to send
-    let submittedName = name.trim();
-    let submittedPhone = phone.trim();
-
-    if (showManualInputs) {
-      const form = e.currentTarget;
-      submittedName = (form.elements.namedItem("userName") as HTMLInputElement).value.trim();
-      submittedPhone = (form.elements.namedItem("phone") as HTMLInputElement).value.trim();
-    }
-
     formData.append("complaintText", complaintText);
-    formData.append("userName", submittedName);
-    formData.append("phone", submittedPhone);
 
     const result = await submitComplaint(null, formData);
 
@@ -176,17 +119,7 @@ export default function SupportFAB() {
       setSuccess(true);
       setComplaintText("");
       setLoading(false);
-      
-      // Save name/phone to cookies if they were typed manually (not logged in)
-      if (!isLoggedIn) {
-        setCookie("support_user_name", submittedName);
-        setCookie("support_phone_number", submittedPhone);
-        setName(submittedName);
-        setPhone(submittedPhone);
-        setShowManualInputs(false);
-      }
 
-      // Close the modal after a short delay
       setTimeout(() => {
         setIsOpen(false);
         setSuccess(false);
@@ -198,6 +131,7 @@ export default function SupportFAB() {
     return null;
   }
 
+  // Not logged in → show WhatsApp button
   if (!isLoggedIn) {
     return (
       <div className="fixed left-6 bottom-6 z-50" dir="rtl">
@@ -214,6 +148,7 @@ export default function SupportFAB() {
     );
   }
 
+  // Logged in → show complaint FAB
   return (
     <div className="fixed left-6 bottom-6 z-50 font-sans" dir="rtl">
       {/* Floating Action Button */}
@@ -265,80 +200,18 @@ export default function SupportFAB() {
               </div>
             ) : (
               <form onSubmit={handleSubmit} className="space-y-4">
-                {/* User details header (if cookies or profile data exists) */}
-                {profileLoaded && !showManualInputs && (name || phone) && (
-                  <div className="p-3 bg-[#0F1623]/60 rounded-xl border border-white/5 text-xs text-[#F0EDE6]/80 flex flex-col gap-1">
-                    <div className="flex justify-between items-center">
-                      <span className="font-semibold text-amber-400">بيانات الاتصال المستخدمة:</span>
-                      <button
-                        type="button"
-                        onClick={() => setShowManualInputs(true)}
-                        className="text-amber-500 hover:text-amber-400 font-bold transition-colors cursor-pointer underline text-[10px]"
-                      >
-                        تعديل البيانات
-                      </button>
-                    </div>
-                    <div className="flex items-center gap-1 mt-1 text-[#F0EDE6]/70">
-                      <User className="w-3.5 h-3.5" />
+                {/* Read-only user info card */}
+                {(name || phone) && (
+                  <div className="p-3 bg-[#0F1623]/60 rounded-xl border border-white/5 text-xs text-[#F0EDE6]/80 flex flex-col gap-1.5">
+                    <span className="font-semibold text-amber-400 text-[11px]">بيانات الاتصال الخاصة بك:</span>
+                    <div className="flex items-center gap-1.5 text-[#F0EDE6]/70">
+                      <User className="w-3.5 h-3.5 shrink-0" />
                       <span>{name || "غير محدد"}</span>
                     </div>
-                    <div className="flex items-center gap-1 text-[#F0EDE6]/70" dir="ltr">
-                      <Phone className="w-3.5 h-3.5" />
+                    <div className="flex items-center gap-1.5 text-[#F0EDE6]/70" dir="ltr">
+                      <Phone className="w-3.5 h-3.5 shrink-0" />
                       <span className="text-right w-full">{phone || "غير محدد"}</span>
                     </div>
-                  </div>
-                )}
-
-                {/* Manual contact details inputs */}
-                {profileLoaded && showManualInputs && (
-                  <div className="space-y-3 animate-in slide-in-from-top-3 duration-250">
-                    <div>
-                      <label htmlFor="support-name" className="block text-xs font-semibold text-[#F0EDE6]/70 mb-1.5">
-                        الاسم بالكامل
-                      </label>
-                      <div className="relative">
-                        <User className="absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#F0EDE6]/40" />
-                        <input
-                          id="support-name"
-                          name="userName"
-                          type="text"
-                          required
-                          defaultValue={name}
-                          placeholder="مثال: أحمد محمد علي"
-                          className="w-full pl-4 pr-10 py-2.5 rounded-xl bg-[#0F1623] border border-white/10 text-sm text-[#F0EDE6] placeholder-[#F0EDE6]/30 focus:outline-none focus:ring-2 focus:ring-amber-500/30 focus:border-amber-500/50 transition-all duration-300"
-                        />
-                      </div>
-                    </div>
-
-                    <div>
-                      <label htmlFor="support-phone" className="block text-xs font-semibold text-[#F0EDE6]/70 mb-1.5">
-                        رقم الهاتف للتواصل
-                      </label>
-                      <div className="relative">
-                        <Phone className="absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#F0EDE6]/40" />
-                        <input
-                          id="support-phone"
-                          name="phone"
-                          type="tel"
-                          required
-                          defaultValue={phone}
-                          placeholder="01xxxxxxxxx"
-                          className="w-full pl-4 pr-10 py-2.5 rounded-xl bg-[#0F1623] border border-white/10 text-sm text-[#F0EDE6] placeholder-[#F0EDE6]/30 focus:outline-none focus:ring-2 focus:ring-amber-500/30 focus:border-amber-500/50 transition-all duration-300 text-right"
-                          dir="ltr"
-                        />
-                      </div>
-                    </div>
-
-                    {/* Back link to show prefilled state if it was toggled */}
-                    {!isLoggedIn && getCookie("support_user_name") && (
-                      <button
-                        type="button"
-                        onClick={() => setShowManualInputs(false)}
-                        className="text-[10px] text-[#F0EDE6]/50 hover:text-[#F0EDE6] underline block cursor-pointer"
-                      >
-                        العودة للبيانات المحفوظة
-                      </button>
-                    )}
                   </div>
                 )}
 

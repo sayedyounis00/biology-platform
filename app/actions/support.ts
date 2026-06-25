@@ -9,31 +9,37 @@ export interface ComplaintState {
 
 export async function submitComplaint(prevState: any, formData: FormData): Promise<ComplaintState> {
   const text = formData.get("complaintText") as string;
-  const name = formData.get("userName") as string;
-  const phone = formData.get("phone") as string;
 
   if (!text || text.trim() === "") {
     return { error: "يرجى كتابة تفاصيل المشكلة" };
   }
-  if (!name || name.trim() === "") {
-    return { error: "يرجى إدخال الاسم" };
-  }
-  if (!phone || phone.trim() === "") {
-    return { error: "يرجى إدخال رقم الهاتف" };
-  }
-
-  // Basic phone validation (digits, minimum length)
-  const cleanPhone = phone.trim();
-  if (cleanPhone.length < 7) {
-    return { error: "يرجى إدخال رقم هاتف صحيح" };
-  }
 
   try {
     const supabase = await createClient();
+
+    // Verify the user is authenticated
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+
+    if (authError || !user) {
+      return { error: "يجب تسجيل الدخول لإرسال شكوى" };
+    }
+
+    // Fetch name & phone from the user's profile
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("full_name, phone")
+      .eq("id", user.id)
+      .maybeSingle();
+
+    const userName = profile?.full_name || user.user_metadata?.full_name || user.email?.split("@")[0] || "";
+    const phoneNumber = profile?.phone || "";
+
+    // Insert complaint linked to the user
     const { error } = await supabase.from("complaints").insert({
       complaint_text: text.trim(),
-      phone_number: cleanPhone,
-      user_name: name.trim(),
+      user_id: user.id,
+      user_name: userName,
+      phone_number: phoneNumber || null,
     });
 
     if (error) {
