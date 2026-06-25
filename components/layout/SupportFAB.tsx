@@ -27,6 +27,7 @@ export default function SupportFAB() {
 
   // Form states
   const [complaintText, setComplaintText] = useState("");
+  const [manualPhone, setManualPhone] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
@@ -109,6 +110,9 @@ export default function SupportFAB() {
 
     const formData = new FormData();
     formData.append("complaintText", complaintText);
+    if (!phone && manualPhone.trim()) {
+      formData.append("phone", manualPhone.trim());
+    }
 
     const result = await submitComplaint(null, formData);
 
@@ -119,6 +123,12 @@ export default function SupportFAB() {
       setSuccess(true);
       setComplaintText("");
       setLoading(false);
+
+      // If phone was manually entered, update local state so the input hides
+      if (!phone && manualPhone.trim()) {
+        setPhone(manualPhone.trim());
+        setManualPhone("");
+      }
 
       setTimeout(() => {
         setIsOpen(false);
@@ -201,19 +211,39 @@ export default function SupportFAB() {
             ) : (
               <form onSubmit={handleSubmit} className="space-y-4">
                 {/* Read-only user info card */}
-                {(name || phone) && (
-                  <div className="p-3 bg-[#0F1623]/60 rounded-xl border border-white/5 text-xs text-[#F0EDE6]/80 flex flex-col gap-1.5">
-                    <span className="font-semibold text-amber-400 text-[11px]">بيانات الاتصال الخاصة بك:</span>
-                    <div className="flex items-center gap-1.5 text-[#F0EDE6]/70">
-                      <User className="w-3.5 h-3.5 shrink-0" />
-                      <span>{name || "غير محدد"}</span>
-                    </div>
+                <div className="p-3 bg-[#0F1623]/60 rounded-xl border border-white/5 text-xs text-[#F0EDE6]/80 flex flex-col gap-1.5">
+                  <span className="font-semibold text-amber-400 text-[11px]">بيانات الاتصال الخاصة بك:</span>
+                  <div className="flex items-center gap-1.5 text-[#F0EDE6]/70">
+                    <User className="w-3.5 h-3.5 shrink-0" />
+                    <span>{name || "غير محدد"}</span>
+                  </div>
+                  {phone ? (
                     <div className="flex items-center gap-1.5 text-[#F0EDE6]/70" dir="ltr">
                       <Phone className="w-3.5 h-3.5 shrink-0" />
-                      <span className="text-right w-full">{phone || "غير محدد"}</span>
+                      <span className="text-right w-full">{phone}</span>
                     </div>
-                  </div>
-                )}
+                  ) : (
+                    <div className="mt-1">
+                      <label htmlFor="support-phone" className="block text-[11px] font-semibold text-amber-400/80 mb-1">
+                        رقم الهاتف غير مسجل — أدخله هنا:
+                      </label>
+                      <div className="relative">
+                        <Phone className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#F0EDE6]/40" />
+                        <input
+                          id="support-phone"
+                          name="phone"
+                          type="tel"
+                          required
+                          value={manualPhone}
+                          onChange={(e) => setManualPhone(e.target.value)}
+                          placeholder="01xxxxxxxxx"
+                          className="w-full pl-3 pr-8 py-2 rounded-lg bg-[#0F1623] border border-white/10 text-sm text-[#F0EDE6] placeholder-[#F0EDE6]/30 focus:outline-none focus:ring-2 focus:ring-amber-500/30 focus:border-amber-500/50 transition-all duration-300 text-right"
+                          dir="ltr"
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
 
                 {/* Problem details textarea */}
                 <div>

@@ -9,6 +9,7 @@ export interface ComplaintState {
 
 export async function submitComplaint(prevState: any, formData: FormData): Promise<ComplaintState> {
   const text = formData.get("complaintText") as string;
+  const manualPhone = formData.get("phone") as string | null;
 
   if (!text || text.trim() === "") {
     return { error: "يرجى كتابة تفاصيل المشكلة" };
@@ -32,14 +33,34 @@ export async function submitComplaint(prevState: any, formData: FormData): Promi
       .maybeSingle();
 
     const userName = profile?.full_name || user.user_metadata?.full_name || user.email?.split("@")[0] || "";
-    const phoneNumber = profile?.phone || "";
+    
+    // Use profile phone if available, otherwise use manually submitted phone
+    let phoneNumber = profile?.phone || "";
+    
+    if (!phoneNumber && manualPhone && manualPhone.trim()) {
+      phoneNumber = manualPhone.trim();
+      
+      // Also save the phone to the user's profile for future use
+      await supabase
+        .from("profiles")
+        .update({ phone: phoneNumber, updated_at: new Date().toISOString() })
+        .eq("id", user.id);
+    }
+
+    if (!phoneNumber) {
+      return { error: "يرجى إدخال رقم الهاتف" };
+    }
+
+    if (phoneNumber.length < 7) {
+      return { error: "يرجى إدخال رقم هاتف صحيح" };
+    }
 
     // Insert complaint linked to the user
     const { error } = await supabase.from("complaints").insert({
       complaint_text: text.trim(),
       user_id: user.id,
       user_name: userName,
-      phone_number: phoneNumber || null,
+      phone_number: phoneNumber,
     });
 
     if (error) {
