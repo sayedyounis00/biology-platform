@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Cairo, Rakkas, Amiri, Badeen_Display, Lalezar } from "next/font/google";
 import "./globals.css";
+import SupportFAB from "@/components/layout/SupportFAB";
 
 const cairo = Cairo({
   subsets: ["arabic"],
@@ -92,6 +93,7 @@ export default function RootLayout({
     <html lang="ar" dir="rtl" className={`${cairo.variable} ${rakkas.variable} ${amiri.variable} ${badeenDisplay.variable} ${lalezar.variable} antialiased`}>
       <body className="min-h-screen flex flex-col bg-[#0F1623] text-[#F0EDE6] font-sans">
         {children}
+        <SupportFAB />
       </body>
     </html>
   );

@@ -75,14 +75,10 @@ export default function Navbar() {
               الملف الشخصي
             </Link>
           ) : (
-            <Link
-              href="/courses"
-              className="text-[#F0EDE6]/60 text-sm font-medium hover:text-[#F0EDE6] transition-colors"
-            >
-              الدورات
-            </Link>
+            <div></div>
+
           )}
-          
+
           {!loading && (
             <>
               {user ? (
@@ -100,16 +96,16 @@ export default function Navbar() {
               ) : (
                 <>
                   <Link
-                    href="/login"
-                    className="text-[#F0EDE6]/60 text-sm font-medium hover:text-[#F0EDE6] transition-colors"
+                    href="/register"
+                    className="text-[#FFFFF]/60 text-lg font-bold hover:text-[#F0EDE6] transition-colors"
                   >
-                    تسجيل الدخول
+                    أنشي حساب
                   </Link>
                   <Link
-                    href="/register"
+                    href="/login"
                     className="inline-flex items-center gap-1.5 px-5 py-2 rounded-full bg-[#FBBF24] text-[#0F1623] text-sm font-bold hover:bg-[#F59E0B] transition-colors"
                   >
-                    ابدأ الآن
+                    تسجيل الدخول
                     <span aria-hidden="true" className="mr-1">←</span>
                   </Link>
                 </>
@@ -165,7 +161,7 @@ export default function Navbar() {
               الدورات
             </Link>
           )}
-          
+
           {!loading && (
             <>
               {user ? (
