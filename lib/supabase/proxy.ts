@@ -65,10 +65,13 @@ export async function updateSession(request: NextRequest) {
           const redirectResponse = NextResponse.redirect(redirectUrl);
           // Preserve cookie clearing performed by signOut
           supabaseResponse.cookies.getAll().forEach(cookie => {
-            redirectResponse.cookies.set({
-              name: cookie.name,
-              value: cookie.value,
-              ...cookie
+            redirectResponse.cookies.set(cookie.name, cookie.value, {
+              domain: cookie.domain,
+              path: cookie.path,
+              maxAge: cookie.maxAge,
+              httpOnly: cookie.httpOnly,
+              secure: cookie.secure,
+              sameSite: cookie.sameSite,
             });
           });
           return redirectResponse;
