@@ -121,60 +121,6 @@ export default async function CourseLessonsPage({
             </span>
           </nav>
 
-          {/* ─── Course Header ─── */}
-          <div className="mb-12">
-            {/* Thumbnail banner */}
-            {course.thumbnail_url && (
-              <div className="aspect-[3/1] max-h-64 rounded-2xl overflow-hidden mb-8 border border-[#ffffff14]">
-                <img
-                  src={course.thumbnail_url}
-                  alt={course.title}
-                  className="w-full h-full object-cover"
-                />
-              </div>
-            )}
-
-            <div className="flex flex-col gap-3 text-center">
-              <span className="text-[#FBBF24] text-xs font-bold uppercase tracking-widest">
-                محتوى الكورس
-              </span>
-              <h1 className="text-3xl md:text-4xl lg:text-5xl font-extrabold text-[#F0EDE6] tracking-tight">
-                {course.title}
-              </h1>
-
-              {course.description && (
-                <p className="text-[#F0EDE6]/50 text-base max-w-2xl mx-auto leading-relaxed">
-                  {course.description}
-                </p>
-              )}
-
-              {/* Stats row */}
-              <div className="flex items-center justify-center gap-4 mt-2 flex-wrap">
-                {/* Lesson count */}
-                <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#1A2235] border border-[#ffffff14]">
-                  <svg className="w-4 h-4 text-[#FBBF24]" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  <span className="text-[#F0EDE6]/70 text-xs font-semibold">
-                    {lessons.length} {lessons.length === 1 ? "درس" : "دروس"}
-                  </span>
-                </div>
-
-                {/* Price badge */}
-                {(!course.price || course.price === 0) ? (
-                  <span className="px-3 py-1.5 rounded-full text-xs font-semibold bg-emerald-500/15 text-emerald-400 border border-emerald-500/20">
-                    مجاني
-                  </span>
-                ) : (
-                  <span className="px-3 py-1.5 rounded-full text-xs font-semibold bg-[#FBBF24]/15 text-[#FBBF24] border border-[#FBBF24]/20">
-                    {course.price} EGP
-                  </span>
-                )}
-              </div>
-            </div>
-          </div>
-
           {/* ─── Section divider ─── */}
           <div className="flex items-center gap-4 mb-8">
             <div className="h-px flex-1 bg-gradient-to-l from-[#FBBF24]/20 to-transparent" />
