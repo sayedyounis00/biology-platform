@@ -14,7 +14,7 @@ export default function ScrollVideoHero({ children }: ScrollVideoHeroProps) {
       {/* Background Image Layer */}
       <div className="absolute inset-0 z-0">
         <Image
-          src="/brin-dotted.jpeg"
+          src="/website-bg.jpeg"
           alt="منصة الأحياء"
           fill
           priority
