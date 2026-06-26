@@ -48,7 +48,32 @@ export async function updateSession(request: NextRequest) {
     const hasAuthHeader = !!request.headers.get("Authorization");
 
     if (hasAuthCookie || hasAuthHeader) {
-      await supabase.auth.getUser();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const deviceToken = request.cookies.get("device_token")?.value;
+        const { data: dbSession } = await supabase
+          .from("user_sessions")
+          .select("session_token")
+          .eq("user_id", user.id)
+          .maybeSingle();
+
+        if (!deviceToken || !dbSession || dbSession.session_token !== deviceToken) {
+          await supabase.auth.signOut();
+          const redirectUrl = new URL("/login", request.url);
+          redirectUrl.searchParams.set("reason", "session_conflict");
+          
+          const redirectResponse = NextResponse.redirect(redirectUrl);
+          // Preserve cookie clearing performed by signOut
+          supabaseResponse.cookies.getAll().forEach(cookie => {
+            redirectResponse.cookies.set({
+              name: cookie.name,
+              value: cookie.value,
+              ...cookie
+            });
+          });
+          return redirectResponse;
+        }
+      }
     }
   } catch (error) {
     console.error("Supabase session refresh failed in proxy middleware:", error);

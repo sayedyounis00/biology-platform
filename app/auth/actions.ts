@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { headers } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
+import { setDeviceSession } from "@/lib/deviceToken";
 
 export async function login(formData: FormData) {
   const supabase = await createClient();
@@ -21,6 +22,7 @@ export async function login(formData: FormData) {
 
   const { data: { user } } = await supabase.auth.getUser();
   if (user) {
+    await setDeviceSession(user.id);
     const { data: profile } = await supabase.from("profiles").select("phone, current_year_id").eq("id", user.id).single();
     if (!profile?.phone || !profile?.current_year_id) {
       redirect("/profile");
@@ -50,6 +52,11 @@ export async function signup(formData: FormData) {
 
   if (error) {
     redirect("/register?error=" + encodeURIComponent(error.message));
+  }
+
+  const { data: { user } } = await supabase.auth.getUser();
+  if (user) {
+    await setDeviceSession(user.id);
   }
 
   revalidatePath("/", "layout");

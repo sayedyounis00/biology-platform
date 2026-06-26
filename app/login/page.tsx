@@ -31,6 +31,7 @@ function GoogleIcon() {
 function LoginContent() {
   const searchParams = useSearchParams();
   const error = searchParams.get("error");
+  const reason = searchParams.get("reason");
   const [isLoading, setIsLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
 
@@ -74,6 +75,12 @@ function LoginContent() {
         {error && (
           <div className="mb-6 p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm text-center">
             {decodeURIComponent(error)}
+          </div>
+        )}
+
+        {reason === "session_conflict" && (
+          <div className="mb-6 p-4 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-400 text-sm text-center">
+            ⚠️ تم فتح حسابك على جهاز آخر. يرجى تسجيل الدخول مرة أخرى للاستمرار هنا (سيؤدي هذا إلى فصل الجهاز الآخر).
           </div>
         )}
 

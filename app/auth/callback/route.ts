@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { setDeviceSession } from "@/lib/deviceToken";
 
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url);
@@ -13,6 +14,7 @@ export async function GET(request: Request) {
     if (!error) {
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
+        await setDeviceSession(user.id);
         const { data: profile } = await supabase.from("profiles").select("phone, current_year_id").eq("id", user.id).single();
         if (!profile?.phone || !profile?.current_year_id) {
           return NextResponse.redirect(`${origin}/profile`);
