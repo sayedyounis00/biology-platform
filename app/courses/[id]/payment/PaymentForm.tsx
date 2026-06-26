@@ -36,6 +36,27 @@ export default function PaymentForm({ courseId, userId, courseTitle }: PaymentFo
         }
 
         if (data) {
+          // If status is "approved", verify enrollment still exists
+          // (admin may have unsubscribed the user)
+          if (data.status === "approved") {
+            const { data: enrollment } = await supabase
+              .from("enrollments")
+              .select("id")
+              .eq("user_id", userId)
+              .eq("course_id", courseId)
+              .maybeSingle();
+
+            if (!enrollment) {
+              // Enrollment was removed — delete stale request so user can re-purchase
+              await supabase
+                .from("course_requests")
+                .delete()
+                .eq("user_id", userId)
+                .eq("course_id", courseId);
+              setStatus("none");
+              return;
+            }
+          }
           setStatus(data.status as any);
         } else {
           setStatus("none");
