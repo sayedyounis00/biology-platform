@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
-import { Circle, Check, Play, Pause, Volume2, VolumeX, RotateCcw, RotateCw, Maximize, Minimize } from "lucide-react";
+import { Circle, Check, Play, Pause, Volume2, VolumeX, RotateCcw, RotateCw, Maximize, Minimize, Settings, FileText, Download, ChevronDown } from "lucide-react";
 import { toggleLessonCompleteAction, markLessonCompleteAction } from "@/app/courses/actions";
 import type { Course, Lesson } from "@/types";
 
@@ -146,9 +146,12 @@ export default function LessonViewer({
   const [duration, setDuration] = useState(0);
   const [isMuted, setIsMuted] = useState(true); // Default to muted to allow autoplay
   const [playbackSpeed, setPlaybackSpeed] = useState(1);
+  const [videoQuality, setVideoQuality] = useState<"480" | "720">("720");
+  const [showQualityMenu, setShowQualityMenu] = useState(false);
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const videoContainerRef = useRef<HTMLDivElement>(null);
+  const qualityMenuRef = useRef<HTMLDivElement>(null);
   const ytPlayerRef = useRef<any>(null);
   const [ytPlayerReady, setYtPlayerReady] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -518,6 +521,32 @@ export default function LessonViewer({
     return () => document.removeEventListener("fullscreenchange", onFsChange);
   }, []);
 
+  // Close quality menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (qualityMenuRef.current && !qualityMenuRef.current.contains(e.target as Node)) {
+        setShowQualityMenu(false);
+      }
+    };
+    if (showQualityMenu) {
+      document.addEventListener("mousedown", handleClickOutside);
+      return () => document.removeEventListener("mousedown", handleClickOutside);
+    }
+  }, [showQualityMenu]);
+
+  // Handle quality change
+  const handleQualityChange = (quality: "480" | "720") => {
+    setVideoQuality(quality);
+    setShowQualityMenu(false);
+    // TODO: Implement actual quality switching when backend supports multiple quality URLs
+  };
+
+  // Mock attachments data — UI only, will be replaced with real data later
+  const mockAttachments = [
+    { id: "1", name: "ملخص الدرس.pdf", size: "2.4 MB" },
+    { id: "2", name: "تمارين إضافية.pdf", size: "1.1 MB" },
+  ];
+
   // Progress calculations
   const totalLessons = allLessons.length;
   const completedCount = completedIds.size;
@@ -646,8 +675,51 @@ export default function LessonViewer({
                 ))}
               </div>
 
-              {/* Mute and Fullscreen */}
+              {/* Quality Selector, Mute, and Fullscreen */}
               <div className="flex items-center gap-3">
+
+                {/* Video Quality Dropdown */}
+                <div ref={qualityMenuRef} className="relative">
+                  <button
+                    onClick={() => setShowQualityMenu(!showQualityMenu)}
+                    title="جودة الفيديو"
+                    className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                      showQualityMenu
+                        ? "bg-[#FBBF24]/15 border border-[#FBBF24]/30 text-[#FBBF24]"
+                        : "bg-white/5 hover:bg-white/10 text-[#F0EDE6]/70 hover:text-[#F0EDE6]"
+                    }`}
+                  >
+                    <Settings className="w-3.5 h-3.5" />
+                    <span className="font-mono">{videoQuality}p</span>
+                    <ChevronDown className={`w-3 h-3 transition-transform duration-200 ${showQualityMenu ? "rotate-180" : ""}`} />
+                  </button>
+
+                  {/* Dropdown Menu */}
+                  {showQualityMenu && (
+                    <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 bg-[#1A2235] border border-white/15 rounded-xl shadow-2xl overflow-hidden z-50 min-w-[120px] animate-in fade-in slide-in-from-bottom-2 duration-200">
+                      <div className="px-3 py-2 text-[10px] font-bold text-[#F0EDE6]/40 uppercase tracking-wider border-b border-white/5">
+                        جودة الفيديو
+                      </div>
+                      {(["720", "480"] as const).map((q) => (
+                        <button
+                          key={q}
+                          onClick={() => handleQualityChange(q)}
+                          className={`w-full flex items-center justify-between px-3 py-2.5 text-sm font-medium transition-all cursor-pointer ${
+                            videoQuality === q
+                              ? "bg-[#FBBF24]/10 text-[#FBBF24]"
+                              : "text-[#F0EDE6]/70 hover:bg-white/5 hover:text-[#F0EDE6]"
+                          }`}
+                        >
+                          <span className="font-mono font-bold">{q}p</span>
+                          {videoQuality === q && (
+                            <Check className="w-3.5 h-3.5 text-[#FBBF24]" />
+                          )}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
                 <button
                   onClick={handleMuteToggle}
                   title={isMuted ? "إلغاء كتم الصوت" : "كتم الصوت"}
@@ -747,6 +819,65 @@ export default function LessonViewer({
             <p className="text-[#F0EDE6]/40 italic text-sm">لا توجد تفاصيل أو وصف متوفر لهذا الدرس.</p>
           )}
         </div>
+
+        {/* Attachments Section */}
+        {mockAttachments.length > 0 && (
+          <div className="rounded-2xl bg-[#1A2235] border border-white/10 p-6 md:p-8 shadow-xl flex flex-col gap-5 text-right">
+
+            {/* Section Header */}
+            <div className="flex items-center gap-3 border-b border-white/10 pb-4">
+              <div className="w-10 h-10 rounded-xl bg-[#FBBF24]/10 border border-[#FBBF24]/20 flex items-center justify-center flex-shrink-0">
+                <FileText className="w-5 h-5 text-[#FBBF24]" />
+              </div>
+              <div className="flex-1">
+                <h3 className="text-lg font-bold text-[#F0EDE6]">المرفقات</h3>
+                <p className="text-xs text-[#F0EDE6]/40 mt-0.5">
+                  ملفات PDF مرفقة مع هذا الدرس
+                </p>
+              </div>
+              <span className="text-xs text-[#F0EDE6]/50 bg-white/5 px-2.5 py-1 rounded-full font-bold font-mono">
+                {mockAttachments.length} ملف
+              </span>
+            </div>
+
+            {/* Attachment Items */}
+            <div className="flex flex-col gap-3">
+              {mockAttachments.map((attachment) => (
+                <div
+                  key={attachment.id}
+                  className="group flex items-center gap-4 p-4 rounded-xl bg-[#0F1623] border border-white/5 hover:border-[#FBBF24]/20 transition-all duration-300"
+                >
+                  {/* PDF Icon */}
+                  <div className="w-12 h-12 rounded-xl bg-red-500/10 border border-red-500/15 flex items-center justify-center flex-shrink-0 group-hover:bg-red-500/15 transition-colors">
+                    <FileText className="w-6 h-6 text-red-400" />
+                  </div>
+
+                  {/* File Info */}
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-bold text-[#F0EDE6] truncate group-hover:text-[#FBBF24] transition-colors">
+                      {attachment.name}
+                    </p>
+                    <p className="text-xs text-[#F0EDE6]/40 mt-0.5 font-mono">
+                      PDF • {attachment.size}
+                    </p>
+                  </div>
+
+                  {/* Download Button */}
+                  <button
+                    onClick={() => {
+                      // TODO: Implement actual download when backend is ready
+                      console.log("Download attachment:", attachment.id);
+                    }}
+                    className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#FBBF24]/10 border border-[#FBBF24]/20 text-[#FBBF24] hover:bg-[#FBBF24] hover:text-[#0F1623] font-bold text-xs transition-all duration-300 cursor-pointer active:scale-95 flex-shrink-0"
+                  >
+                    <Download className="w-4 h-4" />
+                    <span>تحميل</span>
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
       </div>
 
