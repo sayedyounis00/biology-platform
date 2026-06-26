@@ -541,11 +541,24 @@ export default function LessonViewer({
     // TODO: Implement actual quality switching when backend supports multiple quality URLs
   };
 
-  // Mock attachments data — UI only, will be replaced with real data later
-  const mockAttachments = [
-    { id: "1", name: "ملخص الدرس.pdf", size: "2.4 MB" },
-    { id: "2", name: "تمارين إضافية.pdf", size: "1.1 MB" },
-  ];
+  // Map actual attachment URLs to displayable items
+  const attachments = (lesson.attachment_urls || []).map((url, index) => {
+    let filename = "مرفق";
+    try {
+      const decoded = decodeURIComponent(url);
+      const parts = decoded.split('/');
+      const lastPart = parts[parts.length - 1];
+      const underScoreIdx = lastPart.indexOf('_');
+      if (underScoreIdx !== -1 && !isNaN(Number(lastPart.substring(0, underScoreIdx)))) {
+        filename = lastPart.substring(underScoreIdx + 1);
+      } else {
+        filename = lastPart;
+      }
+    } catch (e) {
+      // fallback to default
+    }
+    return { id: String(index), name: filename, url };
+  });
 
   // Progress calculations
   const totalLessons = allLessons.length;
@@ -821,7 +834,7 @@ export default function LessonViewer({
         </div>
 
         {/* Attachments Section */}
-        {mockAttachments.length > 0 && (
+        {attachments.length > 0 && (
           <div className="rounded-2xl bg-[#1A2235] border border-white/10 p-6 md:p-8 shadow-xl flex flex-col gap-5 text-right">
 
             {/* Section Header */}
@@ -832,17 +845,17 @@ export default function LessonViewer({
               <div className="flex-1">
                 <h3 className="text-lg font-bold text-[#F0EDE6]">المرفقات</h3>
                 <p className="text-xs text-[#F0EDE6]/40 mt-0.5">
-                  ملفات PDF مرفقة مع هذا الدرس
+                  ملفات مرفقة مع هذا الدرس
                 </p>
               </div>
               <span className="text-xs text-[#F0EDE6]/50 bg-white/5 px-2.5 py-1 rounded-full font-bold font-mono">
-                {mockAttachments.length} ملف
+                {attachments.length} ملف
               </span>
             </div>
 
             {/* Attachment Items */}
             <div className="flex flex-col gap-3">
-              {mockAttachments.map((attachment) => (
+              {attachments.map((attachment) => (
                 <div
                   key={attachment.id}
                   className="group flex items-center gap-4 p-4 rounded-xl bg-[#0F1623] border border-white/5 hover:border-[#FBBF24]/20 transition-all duration-300"
@@ -854,25 +867,25 @@ export default function LessonViewer({
 
                   {/* File Info */}
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-bold text-[#F0EDE6] truncate group-hover:text-[#FBBF24] transition-colors">
+                    <p className="text-sm font-bold text-[#F0EDE6] truncate group-hover:text-[#FBBF24] transition-colors" dir="ltr" style={{ textAlign: "right" }}>
                       {attachment.name}
                     </p>
                     <p className="text-xs text-[#F0EDE6]/40 mt-0.5 font-mono">
-                      PDF • {attachment.size}
+                      ملف مرفق
                     </p>
                   </div>
 
                   {/* Download Button */}
-                  <button
-                    onClick={() => {
-                      // TODO: Implement actual download when backend is ready
-                      console.log("Download attachment:", attachment.id);
-                    }}
+                  <a
+                    href={attachment.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    download
                     className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#FBBF24]/10 border border-[#FBBF24]/20 text-[#FBBF24] hover:bg-[#FBBF24] hover:text-[#0F1623] font-bold text-xs transition-all duration-300 cursor-pointer active:scale-95 flex-shrink-0"
                   >
                     <Download className="w-4 h-4" />
                     <span>تحميل</span>
-                  </button>
+                  </a>
                 </div>
               ))}
             </div>

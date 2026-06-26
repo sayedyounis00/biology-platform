@@ -16,5 +16,6 @@ export interface Lesson {
   content: string | null;
   video_url: string | null;
   order_index: number | null;
+  attachment_urls?: string[] | null;
   created_at: string;
 }

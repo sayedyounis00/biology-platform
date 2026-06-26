@@ -32,7 +32,7 @@ export default async function LessonDetailPage({
         .single(),
       supabaseClient
         .from("lessons")
-        .select("id, course_id, title, content, video_url, order_index, created_at")
+        .select("id, course_id, title, content, video_url, order_index, attachment_urls, created_at")
         .eq("id", lessonId)
         .eq("course_id", id)
         .single(),
