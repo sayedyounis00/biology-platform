@@ -9,18 +9,16 @@ import { setDeviceSession } from "@/lib/deviceToken";
 export async function login(formData: FormData) {
   const supabase = await createClient();
 
-  const data = {
+  const { data, error } = await supabase.auth.signInWithPassword({
     email: formData.get("email") as string,
     password: formData.get("password") as string,
-  };
-
-  const { error } = await supabase.auth.signInWithPassword(data);
+  });
 
   if (error) {
     redirect("/login?error=" + encodeURIComponent(error.message));
   }
 
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = data?.user;
   if (user) {
     await setDeviceSession(user.id);
     const { data: profile } = await supabase.from("profiles").select("phone, current_year_id").eq("id", user.id).single();
@@ -40,7 +38,7 @@ export async function signup(formData: FormData) {
   const password = formData.get("password") as string;
   const fullName = formData.get("fullName") as string;
 
-  const { error } = await supabase.auth.signUp({
+  const { data, error } = await supabase.auth.signUp({
     email,
     password,
     options: {
@@ -54,7 +52,7 @@ export async function signup(formData: FormData) {
     redirect("/register?error=" + encodeURIComponent(error.message));
   }
 
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = data?.user;
   if (user) {
     await setDeviceSession(user.id);
   }
