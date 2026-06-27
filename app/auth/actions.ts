@@ -20,7 +20,7 @@ export async function login(formData: FormData) {
 
   const user = data?.user;
   if (user) {
-    await setDeviceSession(user.id);
+    await setDeviceSession(user.id, supabase);
     const { data: profile } = await supabase.from("profiles").select("phone, current_year_id").eq("id", user.id).single();
     if (!profile?.phone || !profile?.current_year_id) {
       redirect("/profile");

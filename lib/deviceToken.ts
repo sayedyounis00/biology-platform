@@ -1,13 +1,12 @@
 import { cookies, headers } from "next/headers";
-import { createClient } from "@/lib/supabase/server";
+import { SupabaseClient } from "@supabase/supabase-js";
 
-export async function setDeviceSession(userId: string) {
+export async function setDeviceSession(userId: string, supabaseClient: SupabaseClient) {
   const deviceToken = crypto.randomUUID();
   const headersList = await headers();
   const userAgent = headersList.get("user-agent") || "Unknown Device";
   
-  const supabase = await createClient();
-  const { error } = await supabase.from("user_sessions").upsert({
+  const { error } = await supabaseClient.from("user_sessions").upsert({
     user_id: userId,
     session_token: deviceToken,
     device_info: userAgent,

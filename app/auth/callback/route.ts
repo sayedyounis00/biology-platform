@@ -14,7 +14,7 @@ export async function GET(request: Request) {
     if (!error) {
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
-        await setDeviceSession(user.id);
+        await setDeviceSession(user.id, supabase);
         const { data: profile } = await supabase.from("profiles").select("phone, current_year_id").eq("id", user.id).single();
         if (!profile?.phone || !profile?.current_year_id) {
           return NextResponse.redirect(`${origin}/profile`);

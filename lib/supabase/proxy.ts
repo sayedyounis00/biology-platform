@@ -61,6 +61,8 @@ export async function updateSession(request: NextRequest) {
           await supabase.auth.signOut();
           const redirectUrl = new URL("/login", request.url);
           redirectUrl.searchParams.set("reason", "session_conflict");
+          const debugReason = !deviceToken ? "no_cookie" : !dbSession ? "no_db" : "mismatch";
+          redirectUrl.searchParams.set("debug", debugReason);
           
           const redirectResponse = NextResponse.redirect(redirectUrl);
           // Preserve cookie clearing performed by signOut
