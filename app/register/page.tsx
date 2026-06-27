@@ -3,7 +3,7 @@
 import { useState, Suspense } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { signup, getGoogleOAuthUrl } from "@/app/auth/actions";
+import { getGoogleOAuthUrl } from "@/app/auth/actions";
 
 function GoogleIcon() {
   return (
@@ -50,7 +50,6 @@ function RegisterContent() {
   const searchParams = useSearchParams();
   const error = searchParams.get("error");
   const success = searchParams.get("success");
-  const [isLoading, setIsLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
 
   const handleGoogleSignUp = async () => {
@@ -144,81 +143,7 @@ function RegisterContent() {
               : "التسجيل بحساب جوجل"}
           </button>
 
-          {/* Divider */}
-          <div className="flex items-center gap-4 my-6">
-            <div className="flex-1 h-px bg-white/10" />
-            <span className="text-[#F0EDE6]/40 text-xs">أو</span>
-            <div className="flex-1 h-px bg-white/10" />
-          </div>
 
-          {/* Registration Form */}
-          <form
-            action={signup}
-            onSubmit={() => setIsLoading(true)}
-            className="space-y-4"
-          >
-            <div>
-              <label
-                htmlFor="fullName"
-                className="block text-sm font-medium text-[#F0EDE6]/70 mb-2"
-              >
-                الاسم الكامل
-              </label>
-              <input
-                id="fullName"
-                name="fullName"
-                type="text"
-                required
-                placeholder="أدخل اسمك الكامل"
-                className="w-full px-4 py-3 rounded-xl bg-[#0F1623] border border-white/10 text-[#F0EDE6] placeholder-[#F0EDE6]/30 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400/50 focus:border-amber-400/50 transition-all duration-300"
-              />
-            </div>
-
-            <div>
-              <label
-                htmlFor="email"
-                className="block text-sm font-medium text-[#F0EDE6]/70 mb-2"
-              >
-                البريد الإلكتروني
-              </label>
-              <input
-                id="email"
-                name="email"
-                type="email"
-                required
-                placeholder="example@email.com"
-                className="w-full px-4 py-3 rounded-xl bg-[#0F1623] border border-white/10 text-[#F0EDE6] placeholder-[#F0EDE6]/30 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400/50 focus:border-amber-400/50 transition-all duration-300"
-                dir="ltr"
-              />
-            </div>
-
-            <div>
-              <label
-                htmlFor="password"
-                className="block text-sm font-medium text-[#F0EDE6]/70 mb-2"
-              >
-                كلمة المرور
-              </label>
-              <input
-                id="password"
-                name="password"
-                type="password"
-                required
-                minLength={6}
-                placeholder="6 أحرف على الأقل"
-                className="w-full px-4 py-3 rounded-xl bg-[#0F1623] border border-white/10 text-[#F0EDE6] placeholder-[#F0EDE6]/30 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400/50 focus:border-amber-400/50 transition-all duration-300"
-                dir="ltr"
-              />
-            </div>
-
-            <button
-              type="submit"
-              disabled={isLoading}
-              className="w-full py-3.5 rounded-xl bg-gradient-to-l from-amber-500 to-amber-600 text-[#0F1623] font-bold text-sm hover:from-amber-400 hover:to-amber-500 transition-all duration-300 shadow-lg shadow-amber-500/20 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {isLoading ? "جاري إنشاء الحساب..." : "إنشاء حساب"}
-            </button>
-          </form>
         </div>
 
         {/* Login link */}
