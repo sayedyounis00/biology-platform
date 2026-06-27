@@ -54,7 +54,7 @@ export async function signup(formData: FormData) {
 
   const user = data?.user;
   if (user) {
-    await setDeviceSession(user.id);
+    await setDeviceSession(user.id, supabase);
   }
 
   revalidatePath("/", "layout");
