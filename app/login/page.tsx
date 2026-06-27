@@ -80,7 +80,7 @@ function LoginContent() {
 
         {reason === "session_conflict" && (
           <div className="mb-6 p-4 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-400 text-sm text-center">
-            ⚠️ تم فتح حسابك على جهاز آخر. يرجى تسجيل الدخول مرة أخرى للاستمرار هنا (سيؤدي هذا إلى فصل الجهاز الآخر).
+            ⚠️ تم فتح حسابك على جهاز آخر. يرجى تسجيل الخروج للاستمرار هنا (سيؤدي هذا إلى حظر حسابك اذا تكرر الامر).
           </div>
         )}
 
