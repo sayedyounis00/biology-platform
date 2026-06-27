@@ -22,6 +22,7 @@ export default async function DashboardPage() {
 
   let profile = null;
   let enrolledCourses: any[] = [];
+  let exams: any[] = [];
 
   try {
     const [profileResult, enrollmentsResult] = await Promise.all([
@@ -57,6 +58,20 @@ export default async function DashboardPage() {
       console.error("Error fetching enrolled courses for dashboard:", enrollmentsResult.error);
     } else {
       enrolledCourses = enrollmentsResult.data || [];
+    }
+
+    if (profile?.current_year_id) {
+      const { data: examsData, error: examsError } = await supabase
+        .from("exams")
+        .select("*")
+        .eq("year_id", profile.current_year_id)
+        .order("created_at", { ascending: false });
+
+      if (examsError) {
+        console.error("Error fetching exams for dashboard:", examsError);
+      } else {
+        exams = examsData || [];
+      }
     }
   } catch (error) {
     console.error("Error in parallel database fetch on dashboard page:", error);
@@ -110,7 +125,9 @@ export default async function DashboardPage() {
               </div>
             </div>
 
-            <ExamNote />
+            {exams.length > 0 && exams.map((exam: any) => (
+              <ExamNote key={exam.id} exam={exam} />
+            ))}
 
             {subscribedCourses.length === 0 ? (
               <div className="text-center py-16 bg-[#0F1623] rounded-xl border border-white/5">
