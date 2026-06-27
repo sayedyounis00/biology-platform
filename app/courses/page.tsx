@@ -17,47 +17,43 @@ export default async function CoursesPage({
 }) {
   const supabaseClient = await createClient();
 
-  let user = null;
-  let allYears: any[] = [];
-
-  try {
-    const [userRes, yearsRes] = await Promise.all([
-      supabaseClient.auth.getUser(),
-      supabaseClient.from("years").select("id, title, order_index")
-    ]);
-
-    user = userRes.data?.user || null;
-    allYears = yearsRes.data || [];
-  } catch (e) {
-    console.error("Error in parallel fetch Step 1 on courses page:", e);
-  }
-
+  const { data: { user } } = await supabaseClient.auth.getUser();
   const isLoggedIn = !!user;
 
+  let allYears: any[] = [];
   let enrolledCourseIds: string[] = [];
   let userYearOrderIndex: number | null = null;
 
-  if (user) {
-    try {
-      const [enrollmentsRes, profileRes] = await Promise.all([
-        supabaseClient.from("enrollments").select("course_id").eq("user_id", user.id),
-        supabaseClient.from("profiles").select("current_year_id").eq("id", user.id).maybeSingle()
-      ]);
+  try {
+    const yearsPromise = supabaseClient.from("years").select("id, title, order_index");
+    const enrollmentsPromise = user 
+      ? supabaseClient.from("enrollments").select("course_id").eq("user_id", user.id)
+      : Promise.resolve({ data: null });
+    const profilePromise = user
+      ? supabaseClient.from("profiles").select("current_year_id").eq("id", user.id).maybeSingle()
+      : Promise.resolve({ data: null });
 
-      if (enrollmentsRes.data) {
-        enrolledCourseIds = enrollmentsRes.data.map((e: any) => e.course_id);
-      }
+    const [yearsRes, enrollmentsRes, profileRes] = await Promise.all([
+      yearsPromise,
+      enrollmentsPromise,
+      profilePromise
+    ]);
 
-      const currentYearId = profileRes.data?.current_year_id;
-      if (currentYearId) {
-        const userYear = allYears.find((y) => y.id === currentYearId);
-        if (userYear) {
-          userYearOrderIndex = userYear.order_index;
-        }
-      }
-    } catch (e) {
-      console.error("Error in parallel fetch Step 2 on courses page:", e);
+    allYears = yearsRes.data || [];
+
+    if (enrollmentsRes.data) {
+      enrolledCourseIds = enrollmentsRes.data.map((e: any) => e.course_id);
     }
+
+    const currentYearId = profileRes.data?.current_year_id;
+    if (currentYearId) {
+      const userYear = allYears.find((y) => y.id === currentYearId);
+      if (userYear) {
+        userYearOrderIndex = userYear.order_index;
+      }
+    }
+  } catch (e) {
+    console.error("Error fetching initial data on courses page:", e);
   }
 
   const { grade } = await searchParams;

@@ -44,7 +44,7 @@ export default function ExamNote({ exam }: { exam?: any }) {
         <div>
           <h3 className="text-lg font-bold text-[#C0E838] mb-1">{exam.title}</h3>
           <p className="text-base font-medium leading-relaxed">
-            قم بتحميل الامتحان المرفق (<a href={exam.exam_url} onClick={handleDownload} className="underline hover:text-white text-emerald-400 cursor-pointer">تحميل من هنا</a>) وارسال حله إلى <span className="font-bold text-[#C0E838] px-1" dir="ltr">01143825523</span>، ثم اضغط على زر "تم الارسال" لتأكيد ارسالك للامتحان.
+            قم بتحميل الامتحان المرفق (<a href={exam.exam_url} onClick={handleDownload} className="underline hover:text-white text-emerald-400 cursor-pointer">تحميل من هنا</a>) وارسال حله إلى <span className="font-bold text-[#C0E838] px-1" dir="ltr">01006109432</span>، ثم اضغط على زر "تم الارسال" لتأكيد ارسالك للامتحان.
           </p>
         </div>
       </div>

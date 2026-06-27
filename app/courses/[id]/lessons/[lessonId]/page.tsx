@@ -15,16 +15,19 @@ export default async function LessonDetailPage({
   const lessonId = rawLessonId.split("-").slice(0, 5).join("-");
 
   const supabaseClient = await createClient();
+  const { data: { user } } = await supabaseClient.auth.getUser();
 
-  // Step 1: Fetch user, course details, current lesson details, and all lessons in parallel
+  if (!user) {
+    redirect("/login");
+  }
+
+  // Step 1: Fetch course details, current lesson details, all lessons, and enrollment in parallel
   let course: Course;
   let lesson: Lesson;
   let allLessons: Lesson[] = [];
-  let user = null;
 
   try {
-    const [userRes, courseRes, lessonRes, allLessonsRes] = await Promise.all([
-      supabaseClient.auth.getUser(),
+    const [courseRes, lessonRes, allLessonsRes, enrollmentRes] = await Promise.all([
       supabaseClient
         .from("courses")
         .select("id, title, description, price, is_published")
@@ -40,13 +43,14 @@ export default async function LessonDetailPage({
         .from("lessons")
         .select("id, title, order_index, created_at, video_url")
         .eq("course_id", id)
-        .order("order_index", { ascending: true })
+        .order("order_index", { ascending: true }),
+      supabaseClient
+        .from("enrollments")
+        .select("id")
+        .eq("user_id", user.id)
+        .eq("course_id", id)
+        .maybeSingle()
     ]);
-
-    user = userRes.data?.user || null;
-    if (!user) {
-      redirect("/login");
-    }
 
     if (courseRes.error || !courseRes.data) {
       notFound();
@@ -55,6 +59,11 @@ export default async function LessonDetailPage({
 
     if (!course.is_published) {
       notFound();
+    }
+
+    // If the course is paid, protect access via enrollment check
+    if (course.price && course.price > 0 && (!enrollmentRes.data || enrollmentRes.error)) {
+      redirect(`/courses/${rawId}/payment`);
     }
 
     if (lessonRes.error || !lessonRes.data) {
@@ -68,19 +77,10 @@ export default async function LessonDetailPage({
     notFound();
   }
 
-  // Step 2: Fetch enrollment check and lesson progress in parallel
+  // Step 2: Fetch lesson progress
   let initialCompletedLessonIds: string[] = [];
 
   try {
-    const enrollmentPromise = (course.price && course.price > 0)
-      ? supabaseClient
-          .from("enrollments")
-          .select("id")
-          .eq("user_id", user.id)
-          .eq("course_id", course.id)
-          .maybeSingle()
-      : Promise.resolve({ data: { id: "free" }, error: null });
-
     const progressPromise = allLessons.length > 0
       ? supabaseClient
           .from("lesson_progress")
@@ -90,19 +90,10 @@ export default async function LessonDetailPage({
           .eq("completed", true)
       : Promise.resolve({ data: [], error: null });
 
-    const [enrollmentRes, progressRes] = await Promise.all([
-      enrollmentPromise,
-      progressPromise
-    ]);
-
-    // If the course is paid, protect access via enrollment check
-    if (course.price && course.price > 0 && (!enrollmentRes.data || enrollmentRes.error)) {
-      redirect(`/courses/${rawId}/payment`);
-    }
-
+    const progressRes = await progressPromise;
     initialCompletedLessonIds = (progressRes.data || []).map((p) => p.lesson_id);
   } catch (error) {
-    console.error("Error in parallel fetch Step 2 on lesson page:", error);
+    console.error("Error in fetch Step 2 on lesson page:", error);
   }
 
   // Base64 encode the video URL to prevent raw link showing in View Source

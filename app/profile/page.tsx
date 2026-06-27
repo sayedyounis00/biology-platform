@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import Navbar from "@/components/layout/Navbar";
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
@@ -289,10 +290,12 @@ export default async function ProfilePage({
                       <div className="flex items-center gap-4 w-full sm:w-auto">
                         <div className="w-16 h-12 rounded-lg overflow-hidden bg-[#1A2235] flex-shrink-0 flex items-center justify-center">
                           {course.thumbnail_url ? (
-                            <img
+                            <Image
                               src={course.thumbnail_url}
                               alt={course.title}
-                              className="w-full h-full object-cover"
+                              fill
+                              sizes="64px"
+                              className="object-cover"
                             />
                           ) : (
                             <span className="text-[#F0EDE6]/20 text-lg font-bold">

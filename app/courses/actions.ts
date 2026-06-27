@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { revalidatePath } from "next/cache";
 
 export async function toggleLessonCompleteAction(lessonId: string, isCompleted: boolean) {
   const supabase = await createClient();
@@ -37,6 +38,9 @@ export async function toggleLessonCompleteAction(lessonId: string, isCompleted: 
     }
   }
 
+  // Not revalidating a specific path because it might be called from different course pages.
+  // Revalidating the layout clears the router cache and ensures fresh data.
+  revalidatePath("/courses", "layout");
   return { success: true };
 }
 
@@ -60,5 +64,6 @@ export async function markLessonCompleteAction(lessonId: string) {
     return { success: false, error: error.message };
   }
 
+  revalidatePath("/courses", "layout");
   return { success: true };
 }

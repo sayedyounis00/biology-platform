@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import Navbar from "@/components/layout/Navbar";
 import ScrollVideoHero from "@/components/home/ScrollVideoHero";
 import ParallaxSection from "@/components/home/ParallaxSection";
@@ -130,10 +131,12 @@ export default async function Home() {
                   />
                   {/* Main Image Wrapper that clips the image to a matching blob shape */}
                   <div className="absolute inset-4 overflow-hidden rounded-[30%_70%_70%_30%_/_30%_30%_70%_70%] z-20 shadow-inner">
-                    <img
+                    <Image
                       src="/study_win.jpeg"
                       alt="ذاكر واكسب"
-                      className="w-full h-full object-cover scale-105 hover:scale-110 transition-transform duration-700 pointer-events-none"
+                      fill
+                      sizes="(max-width: 768px) 100vw, 440px"
+                      className="object-cover scale-105 hover:scale-110 transition-transform duration-700 pointer-events-none"
                     />
                   </div>
                 </div>
@@ -167,10 +170,12 @@ export default async function Home() {
               >
                 {/* Thumbnail */}
                 <div className="aspect-[4/3] relative overflow-hidden bg-[#0A0E17]">
-                  <img
+                  <Image
                     src="/biology_grade1.png"
                     alt="الصف الدراسي الأول"
-                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                    fill
+                    sizes="(max-width: 768px) 100vw, 33vw"
+                    className="object-cover transition-transform duration-500 group-hover:scale-105"
                   />
                 </div>
 
@@ -194,10 +199,12 @@ export default async function Home() {
               >
                 {/* Thumbnail */}
                 <div className="aspect-[4/3] relative overflow-hidden bg-[#0A0E17]">
-                  <img
+                  <Image
                     src="/biology_grade2.png"
                     alt="الصف الدراسي الثاني"
-                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                    fill
+                    sizes="(max-width: 768px) 100vw, 33vw"
+                    className="object-cover transition-transform duration-500 group-hover:scale-105"
                   />
                 </div>
 
@@ -221,10 +228,12 @@ export default async function Home() {
               >
                 {/* Thumbnail */}
                 <div className="aspect-[4/3] relative overflow-hidden bg-[#0A0E17]">
-                  <img
+                  <Image
                     src="/biology_grade3.png"
                     alt="الصف الدراسي الثالث"
-                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                    fill
+                    sizes="(max-width: 768px) 100vw, 33vw"
+                    className="object-cover transition-transform duration-500 group-hover:scale-105"
                   />
                 </div>
 
@@ -361,7 +370,8 @@ export default async function Home() {
           {/* Credits and Copyright */}
           <div className="text-xs md:text-sm flex flex-wrap items-center justify-center gap-2 font-sans mt-2">
             <span className="text-[#C0E838] font-bold">&lt; Developed By &gt;</span>
-            <span className="px-2.5 py-0.5 rounded bg-[#0b4e5a] border border-[#00d0ff]/20 text-[#F0EDE6] text-xs font-semibold">Sayed</span>
+            <span
+              className="px-2.5 py-0.5 rounded bg-[#0b4e5a] border border-[#00d0ff]/20 text-[#F0EDE6] text-xs font-semibold">Sayed</span>
             <span className="text-[#F0EDE6] font-semibold">,</span>
             <span className="text-[#C0E838] font-bold">&lt; All Copy Rights Reserved @2026 &gt;</span>
           </div>

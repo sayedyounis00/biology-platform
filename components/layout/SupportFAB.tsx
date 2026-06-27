@@ -146,7 +146,7 @@ export default function SupportFAB() {
     return (
       <div className="fixed left-6 bottom-6 z-50" dir="rtl">
         <a
-          href="https://wa.me/201143825523"
+          href="https://wa.me/201006109432"
           target="_blank"
           rel="noopener noreferrer"
           className="w-14 h-14 rounded-full bg-[#25D366] text-white flex items-center justify-center shadow-lg hover:scale-108 hover:shadow-[0_0_20px_rgba(37,211,102,0.6)] active:scale-95 transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-[#25D366] focus:ring-offset-2 focus:ring-offset-[#0F1623]"

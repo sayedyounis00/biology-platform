@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import type { Course } from "@/types";
 import { slugify } from "@/lib/utils";
 
@@ -21,10 +22,12 @@ export default function CourseCard({ course, isLoggedIn, isEnrolled }: CourseCar
       {/* Thumbnail */}
       <div className="aspect-video relative overflow-hidden bg-[#0F1623]">
         {course.thumbnail_url ? (
-          <img
+          <Image
             src={course.thumbnail_url}
             alt={course.title}
-            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+            fill
+            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+            className="object-cover transition-transform duration-500 group-hover:scale-105"
           />
         ) : (
           <div className="w-full h-full flex items-center justify-center">

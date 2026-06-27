@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import Navbar from "@/components/layout/Navbar";
 import ExamNote from "@/components/dashboard/ExamNote";
 import { createClient } from "@/lib/supabase/server";
@@ -160,10 +161,12 @@ export default async function DashboardPage() {
                       {/* Thumbnail */}
                       <div className="aspect-[4/3] w-full relative bg-[#1A2235] overflow-hidden">
                         {course.thumbnail_url ? (
-                          <img
+                          <Image
                             src={course.thumbnail_url}
                             alt={course.title}
-                            className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                            fill
+                            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                            className="object-cover transition-transform duration-700 group-hover:scale-105"
                           />
                         ) : (
                           <div className="w-full h-full flex items-center justify-center text-[#F0EDE6]/10 text-6xl font-black">

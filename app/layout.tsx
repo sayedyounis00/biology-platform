@@ -29,7 +29,7 @@ const badeenDisplay = Badeen_Display({
   subsets: ["arabic"],
   display: "swap",
   variable: "--font-badeen-display",
-
+  adjustFontFallback: false,
 });
 
 const lalezar = Lalezar({

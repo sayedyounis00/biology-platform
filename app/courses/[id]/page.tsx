@@ -33,26 +33,40 @@ export default async function CourseLessonsPage({
   }
 
   const supabaseClient = await createClient();
+  const { data: { user } } = await supabaseClient.auth.getUser();
 
-  // Fetch course details, lessons, and user session in parallel
+  // Fetch course details, lessons, and enrollment in parallel
   let course: Course;
   let lessons: Lesson[] = [];
   let lessonsErrorOccurred = false;
-  let user = null;
+  let enrollmentData = null;
 
   try {
-    const [courseResult, lessonsResult, userResult] = await Promise.all([
-      supabase
-        .from("courses")
-        .select("id, title, description, thumbnail_url, price, is_published, created_at")
-        .eq("id", id)
-        .single(),
-      supabase
-        .from("lessons")
-        .select("id, course_id, title, content, video_url, order_index, created_at")
-        .eq("course_id", id)
-        .order("created_at", { ascending: false }),
-      supabaseClient.auth.getUser()
+    const coursePromise = supabase
+      .from("courses")
+      .select("id, title, description, thumbnail_url, price, is_published, created_at")
+      .eq("id", id)
+      .single();
+
+    const lessonsPromise = supabase
+      .from("lessons")
+      .select("id, course_id, title, content, video_url, order_index, created_at")
+      .eq("course_id", id)
+      .order("created_at", { ascending: false });
+
+    const enrollmentPromise = user
+      ? supabaseClient
+          .from("enrollments")
+          .select("id")
+          .eq("user_id", user.id)
+          .eq("course_id", id)
+          .maybeSingle()
+      : Promise.resolve({ data: null, error: null });
+
+    const [courseResult, lessonsResult, enrollmentResult] = await Promise.all([
+      coursePromise,
+      lessonsPromise,
+      enrollmentPromise
     ]);
 
     if (courseResult.error || !courseResult.data) {
@@ -67,7 +81,7 @@ export default async function CourseLessonsPage({
       lessons = (lessonsResult.data as Lesson[]) || [];
     }
 
-    user = userResult.data?.user || null;
+    enrollmentData = enrollmentResult.data;
   } catch (error) {
     console.error("Error in parallel database fetch on course page:", error);
     notFound();
@@ -77,19 +91,6 @@ export default async function CourseLessonsPage({
   if (course.price && course.price > 0) {
     if (!user) {
       redirect("/register");
-    }
-
-    let enrollmentData = null;
-    try {
-      const { data } = await supabaseClient
-        .from("enrollments")
-        .select("id")
-        .eq("user_id", user.id)
-        .eq("course_id", course.id)
-        .maybeSingle();
-      enrollmentData = data;
-    } catch (e) {
-      console.error("Error checking enrollment in course lessons page:", e);
     }
 
     if (!enrollmentData) {
