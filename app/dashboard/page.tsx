@@ -61,16 +61,23 @@ export default async function DashboardPage() {
     }
 
     if (profile?.current_year_id) {
-      const { data: examsData, error: examsError } = await supabase
-        .from("exams")
-        .select("*")
-        .eq("year_id", profile.current_year_id)
-        .order("created_at", { ascending: false });
+      const [examsResult, submissionsResult] = await Promise.all([
+        supabase
+          .from("exams")
+          .select("*")
+          .eq("year_id", profile.current_year_id)
+          .order("created_at", { ascending: false }),
+        supabase
+          .from("exam_submissions")
+          .select("exam_id")
+          .eq("user_id", user.id)
+      ]);
 
-      if (examsError) {
-        console.error("Error fetching exams for dashboard:", examsError);
+      if (examsResult.error) {
+        console.error("Error fetching exams for dashboard:", examsResult.error);
       } else {
-        exams = examsData || [];
+        const submittedExamIds = new Set((submissionsResult.data || []).map((s: any) => s.exam_id));
+        exams = (examsResult.data || []).filter((exam: any) => !submittedExamIds.has(exam.id));
       }
     }
   } catch (error) {

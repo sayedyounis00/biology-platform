@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { submitExam } from "@/app/dashboard/actions";
 
 export default function ExamNote({ exam }: { exam?: any }) {
   const [isSent, setIsSent] = useState(false);
@@ -27,6 +28,11 @@ export default function ExamNote({ exam }: { exam?: any }) {
     }
   };
 
+  const handleSend = async () => {
+    setIsSent(true);
+    await submitExam(exam.id);
+  };
+
   return (
     <div className="mb-8 bg-[#2A364D]/60 border border-[#C0E838]/30 rounded-xl p-6 text-[#F0EDE6] flex flex-col md:flex-row items-center justify-between gap-4 shadow-lg backdrop-blur-sm">
       <div className="flex items-start md:items-center gap-4">
@@ -43,7 +49,7 @@ export default function ExamNote({ exam }: { exam?: any }) {
         </div>
       </div>
       <button 
-        onClick={() => setIsSent(true)}
+        onClick={handleSend}
         disabled={isSent}
         className={`whitespace-nowrap px-8 py-3 rounded-xl font-bold text-sm transition-all duration-300 shadow-md ${
           isSent 
@@ -51,7 +57,7 @@ export default function ExamNote({ exam }: { exam?: any }) {
             : "bg-[#C0E838] text-[#0F1623] hover:bg-[#b0d530] hover:shadow-[0_0_20px_rgba(192,232,56,0.3)] cursor-pointer"
         }`}
       >
-        {isSent ? "تم التأكيد ✓" : "تم الارسال"}
+        {isSent ? "جاري التأكيد..." : "تم الارسال"}
       </button>
     </div>
   );
