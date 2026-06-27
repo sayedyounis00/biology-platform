@@ -1,5 +1,6 @@
 import Link from "next/link";
 import Navbar from "@/components/layout/Navbar";
+import ExamNote from "@/components/dashboard/ExamNote";
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { slugify } from "@/lib/utils";
@@ -108,6 +109,8 @@ export default async function DashboardPage() {
                 </Link>
               </div>
             </div>
+
+            <ExamNote />
 
             {subscribedCourses.length === 0 ? (
               <div className="text-center py-16 bg-[#0F1623] rounded-xl border border-white/5">
