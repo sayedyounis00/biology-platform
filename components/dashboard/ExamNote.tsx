@@ -7,6 +7,26 @@ export default function ExamNote({ exam }: { exam?: any }) {
 
   if (!exam) return null;
 
+  const handleDownload = async (e: React.MouseEvent<HTMLAnchorElement>) => {
+    e.preventDefault();
+    try {
+      // For Supabase storage, adding ?download= forces the backend to send Content-Disposition: attachment
+      // If it's already got query params, we append &download=
+      const url = new URL(exam.exam_url);
+      url.searchParams.set('download', 'true');
+      
+      const a = document.createElement('a');
+      a.href = url.toString();
+      a.download = exam.title || 'exam';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    } catch (error) {
+      console.error("Error with download:", error);
+      window.open(exam.exam_url, '_blank');
+    }
+  };
+
   return (
     <div className="mb-8 bg-[#2A364D]/60 border border-[#C0E838]/30 rounded-xl p-6 text-[#F0EDE6] flex flex-col md:flex-row items-center justify-between gap-4 shadow-lg backdrop-blur-sm">
       <div className="flex items-start md:items-center gap-4">
@@ -18,7 +38,7 @@ export default function ExamNote({ exam }: { exam?: any }) {
         <div>
           <h3 className="text-lg font-bold text-[#C0E838] mb-1">{exam.title}</h3>
           <p className="text-base font-medium leading-relaxed">
-            قم بتحميل الامتحان المرفق (<a href={exam.exam_url} target="_blank" rel="noopener noreferrer" className="underline hover:text-white text-emerald-400">تحميل من هنا</a>) وارسال حله إلى <span className="font-bold text-[#C0E838] px-1" dir="ltr">01143825523</span>، ثم اضغط على زر "تم الارسال" لتأكيد ارسالك للامتحان.
+            قم بتحميل الامتحان المرفق (<a href={exam.exam_url} onClick={handleDownload} className="underline hover:text-white text-emerald-400 cursor-pointer">تحميل من هنا</a>) وارسال حله إلى <span className="font-bold text-[#C0E838] px-1" dir="ltr">01143825523</span>، ثم اضغط على زر "تم الارسال" لتأكيد ارسالك للامتحان.
           </p>
         </div>
       </div>
