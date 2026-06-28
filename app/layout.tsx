@@ -52,7 +52,7 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://ahmedsaad-biology.com"),
+  metadataBase: new URL("https://bioamrahmedsaad.com/"),
   title: {
     default: "منصة مستر أحمد سعد للأحياء",
     template: "%s | منصة مستر أحمد سعد للأحياء",
@@ -63,7 +63,7 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     locale: "ar_EG",
-    url: "https://ahmedsaad-biology.com",
+    url: "https://bioamrahmedsaad.com/",
     siteName: "منصة مستر أحمد سعد للأحياء",
     title: "منصة مستر أحمد سعد للأحياء",
     description: "المنصة التعليمية الأولى لتبسيط مادة الأحياء لطلاب الثانوية العامة في بسيون - دروس مكثفة ومتابعة مستمرة مع مستر أحمد سعد.",
