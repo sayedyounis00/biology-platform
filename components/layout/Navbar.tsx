@@ -6,7 +6,8 @@ import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
 import { signOut } from "@/app/auth/actions";
 import { User } from "@supabase/supabase-js";
-
+import Image from "next/image";
+import logo from "@/assets/website-logo.png";
 export default function Navbar() {
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -56,13 +57,20 @@ export default function Navbar() {
           : "bg-transparent"
       )}
     >
-      <div className="mx-auto max-w-6xl px-6 flex items-center justify-between h-16">
+      <div className="mx-auto max-w-6xl px-6 flex items-center justify-between h-20">
         {/* Logo */}
         <Link
           href="/"
-          className="font-gravity font-bold text-lg"
+          className="flex items-center"
         >
-          احمد سعد
+          <Image
+            src={logo}
+            alt="احمد سعد"
+            width={150}
+            height={50}
+            className="w-15 md:w-35 h-auto object-contain"
+            priority
+          />
         </Link>
 
         {/* Desktop links */}

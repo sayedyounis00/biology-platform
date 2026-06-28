@@ -2,6 +2,7 @@
 
 import { useState, Suspense } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { useSearchParams } from "next/navigation";
 import { getGoogleOAuthUrl } from "@/app/auth/actions";
 
@@ -100,42 +101,43 @@ function RegisterContent() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4 py-12 relative overflow-hidden">
+    <div className="min-h-screen flex items-center justify-center p-4 md:p-8 relative overflow-hidden">
       {/* Background decoration */}
       <div className="absolute inset-0 pointer-events-none">
         <div className="absolute top-1/4 right-1/4 w-96 h-96 bg-amber-400/5 rounded-full blur-3xl" />
         <div className="absolute bottom-1/4 left-1/4 w-80 h-80 bg-amber-400/3 rounded-full blur-3xl" />
       </div>
 
-      <div className="w-full max-w-md relative z-10">
-        {/* Logo / Header */}
-        <div className="text-center mb-8">
-          <Link href="/" className="inline-block mb-4">
-            <span className="font-gravity text-3xl">م/احمد سعد</span>
-          </Link>
-          <h1 className="text-2xl font-bold text-[#F0EDE6] mb-2">
-            إنشاء حساب جديد
-          </h1>
-          <p className="text-[#F0EDE6]/60 text-sm">
-            انضم إلينا وابدأ رحلة التعلّم
-          </p>
-        </div>
+      <div className="w-full max-w-5xl relative z-10 flex flex-col md:flex-row bg-[#0F1623]/80 rounded-3xl border border-[#ffffff14] shadow-2xl overflow-hidden min-h-[600px]">
 
-        {/* Error message */}
-        {error && (
-          <div className="mb-6 p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm text-center">
-            {decodeURIComponent(error)}
+        {/* Form Section */}
+        <div className="w-full md:w-1/2 p-8 md:p-12 lg:p-16 flex flex-col justify-center">
+          {/* Logo / Header */}
+          <div className="text-center mb-8">
+            <Link href="/" className="inline-block mb-4">
+              <span className="font-gravity font-bold text-3xl">م/احمد سعد</span>
+            </Link>
+            <h1 className="text-2xl font-bold text-[#F0EDE6] mb-2">
+              إنشاء حساب جديد
+            </h1>
+            <p className="text-[#F0EDE6]/60 text-sm">
+              انضم إلينا وابدأ رحلة التعلّم
+            </p>
           </div>
-        )}
 
-        {/* Card */}
-        <div className="bg-[#1A2235] rounded-2xl border border-white/10 p-8 shadow-2xl shadow-black/20 backdrop-blur-sm">
+          {/* Error message */}
+          {error && (
+            <div className="mb-6 p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm text-center">
+              {decodeURIComponent(error)}
+            </div>
+          )}
+
           {/* Google Sign Up */}
           <button
             type="button"
             disabled={isGoogleLoading}
             onClick={handleGoogleSignUp}
-            className="w-full flex items-center justify-center gap-3 px-4 py-3.5 rounded-xl bg-white/5 border border-white/10 text-[#F0EDE6] font-medium text-sm hover:bg-white/10 hover:border-white/20 transition-all duration-300 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full flex items-center justify-center gap-3 px-4 py-4 rounded-xl bg-white/5 border border-white/10 text-[#F0EDE6] font-bold text-sm hover:bg-white/10 hover:border-white/20 transition-all duration-300 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed mb-6"
           >
             <GoogleIcon />
             {isGoogleLoading
@@ -143,19 +145,28 @@ function RegisterContent() {
               : "التسجيل بحساب جوجل"}
           </button>
 
-
+          {/* Login link */}
+          <p className="text-center text-sm text-[#F0EDE6]/60">
+            لديك حساب بالفعل؟{" "}
+            <Link
+              href="/login"
+              className="text-amber-400 hover:text-amber-300 font-bold transition-colors"
+            >
+              تسجيل الدخول
+            </Link>
+          </p>
         </div>
 
-        {/* Login link */}
-        <p className="text-center mt-6 text-sm text-[#F0EDE6]/50">
-          لديك حساب بالفعل؟{" "}
-          <Link
-            href="/login"
-            className="text-amber-400 hover:text-amber-300 font-medium transition-colors"
-          >
-            تسجيل الدخول
-          </Link>
-        </p>
+        {/* Image Section */}
+        <div className="hidden md:block w-full md:w-1/2 relative bg-[#1A2235]">
+          <Image
+            src="/login-image-3.jpeg"
+            alt="إنشاء حساب جديد"
+            fill
+            className="object-cover"
+            priority
+          />
+        </div>
       </div>
     </div>
   );

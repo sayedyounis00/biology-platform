@@ -56,11 +56,11 @@ export default async function CourseLessonsPage({
 
     const enrollmentPromise = user
       ? supabaseClient
-          .from("enrollments")
-          .select("id")
-          .eq("user_id", user.id)
-          .eq("course_id", id)
-          .maybeSingle()
+        .from("enrollments")
+        .select("id")
+        .eq("user_id", user.id)
+        .eq("course_id", id)
+        .maybeSingle()
       : Promise.resolve({ data: null, error: null });
 
     const [courseResult, lessonsResult, enrollmentResult] = await Promise.all([
@@ -170,22 +170,10 @@ export default async function CourseLessonsPage({
         <div className="mx-auto max-w-6xl px-6 flex flex-col items-center">
           {/* Social Icons Container */}
           <div className="flex items-center justify-center gap-4">
-            {/* TikTok */}
-            <a
-              href="#"
-              target="_blank"
-              rel="noopener noreferrer"
-              aria-label="TikTok"
-              className="w-12 h-12 rounded-full bg-black flex items-center justify-center text-white hover:scale-110 transition-transform duration-300 shadow-[0_4px_12px_rgba(0,0,0,0.3)]"
-            >
-              <svg className="w-5 h-5 fill-current" viewBox="0 0 24 24">
-                <path d="M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.02 1.62 4.2 1.12 1.25 2.7 2.06 4.38 2.33v3.86c-1.07-.12-2.12-.48-3.08-1.03-.96-.58-1.74-1.42-2.25-2.42v7.71c.01 1.95-.56 3.87-1.63 5.43-1.12 1.57-2.77 2.67-4.66 3.1-1.92.42-3.95.14-5.69-.78-1.71-.93-3.04-2.5-3.7-4.38-.69-1.92-.64-4.04.14-5.92.74-1.83 2.15-3.32 3.94-4.14 1.76-.79 3.79-.89 5.62-.27.01 1.42.01 2.83.01 4.25-.87-.41-1.85-.54-2.8-.35-.95.17-1.82.7-2.43 1.48-.61.79-.87 1.8-.73 2.79.13.98.66 1.87 1.45 2.47.78.6 1.77.85 2.76.7 1-.16 1.89-.77 2.43-1.63.49-.8.71-1.74.67-2.68V0z" />
-              </svg>
-            </a>
 
             {/* Facebook */}
             <a
-              href="#"
+              href="https://www.facebook.com/share/1CtxMSWcrR/"
               target="_blank"
               rel="noopener noreferrer"
               aria-label="Facebook"
@@ -198,7 +186,7 @@ export default async function CourseLessonsPage({
 
             {/* YouTube */}
             <a
-              href="#"
+              href="https://youtube.com/@biologiestahmedsaad3579?si=8L2wJ6ctlh8aYG5m"
               target="_blank"
               rel="noopener noreferrer"
               aria-label="YouTube"
@@ -206,19 +194,6 @@ export default async function CourseLessonsPage({
             >
               <svg className="w-5 h-5 fill-current" viewBox="0 0 24 24">
                 <path d="M23.498 6.163a3.003 3.003 0 0 0-2.11-2.108C19.53 3.53 12 3.53 12 3.53s-7.53 0-9.388.525A3.003 3.003 0 0 0 .502 6.163C0 8.04 0 12 0 12s0 3.96.502 5.837a3.003 3.003 0 0 0 2.11 2.108C4.47 20.47 12 20.47 12 20.47s7.53 0 9.388-.525a3.003 3.003 0 0 0 2.11-2.108C24 15.96 24 12 24 12s0-3.96-.502-5.837zM9.545 15.568V8.432L15.818 12l-6.273 3.568z" />
-              </svg>
-            </a>
-
-            {/* Group/Community */}
-            <a
-              href="#"
-              target="_blank"
-              rel="noopener noreferrer"
-              aria-label="Community Group"
-              className="w-12 h-12 rounded-full bg-[#2ea6da] flex items-center justify-center text-white hover:scale-110 transition-transform duration-300 shadow-[0_4px_12px_rgba(46,166,218,0.3)]"
-            >
-              <svg className="w-5 h-5 fill-none stroke-current stroke-2" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
               </svg>
             </a>
           </div>

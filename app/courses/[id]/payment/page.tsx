@@ -6,7 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 import type { Course } from "@/types";
 import PaymentForm from "./PaymentForm";
 
-const WALLET_NUMBER = '01XXXXXXXXX';   // replace with real number
+const WALLET_NUMBER = '01016142501';   
 const WHATSAPP_NUMBER = '01006109432';
 const formattedWhatsappNumber = WHATSAPP_NUMBER.startsWith('0') ? '2' + WHATSAPP_NUMBER : WHATSAPP_NUMBER;
 
