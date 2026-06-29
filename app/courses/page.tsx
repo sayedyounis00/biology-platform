@@ -6,7 +6,7 @@ import type { Course } from "@/types";
 import { cookies } from "next/headers";
 
 const gradeLabels: Record<string, string> = {
-  "1": "الصف الأول الثانوي",
+  "1": "الصف الأول الثانوي    (علوم متكامله )",
   "2": "الصف الثاني الثانوي",
   "3": "الصف الثالث الثانوي",
 };
@@ -28,7 +28,7 @@ export default async function CoursesPage({
 
   try {
     const yearsPromise = supabaseClient.from("years").select("id, title, order_index");
-    const enrollmentsPromise = userId 
+    const enrollmentsPromise = userId
       ? supabaseClient.from("enrollments").select("course_id").eq("user_id", userId)
       : Promise.resolve({ data: null });
     const profilePromise = userId
@@ -76,7 +76,7 @@ export default async function CoursesPage({
 
       if (selectedYear) {
         yearTitle = selectedYear.title;
-        
+
         const { data, error } = await supabase
           .from("courses")
           .select("id, title, description, thumbnail_url, price, is_published, created_at")
@@ -105,10 +105,6 @@ export default async function CoursesPage({
   const eyebrow = gradeLabels[gradeFilter] ?? `Grade ${gradeFilter}`;
   const heading = gradeLabels[gradeFilter] ?? "الكورسات";
 
-  const countText = errorOccurred
-    ? "Failed to load courses count"
-    : `${courses.length} ${courses.length === 1 ? "course" : "courses"} available`;
-
   return (
     <>
       <Navbar />
@@ -123,9 +119,6 @@ export default async function CoursesPage({
             <h1 className="text-3xl md:text-4xl lg:text-5xl font-extrabold text-[#F0EDE6] tracking-tight">
               {heading}
             </h1>
-            <p className="text-[#F0EDE6]/50 text-sm font-medium mt-1 font-mono">
-              {countText}
-            </p>
 
             {/* Grade filter tabs */}
             {!userYearOrderIndex && (
@@ -134,11 +127,10 @@ export default async function CoursesPage({
                   <Link
                     key={g}
                     href={`/courses?grade=${g}`}
-                    className={`px-4 py-2 rounded-full text-xs font-semibold transition-all duration-300 border ${
-                      gradeFilter === g
-                        ? "bg-[#FBBF24] text-[#0F1623] border-[#FBBF24]"
-                        : "bg-transparent text-[#F0EDE6]/60 border-[#ffffff14] hover:border-[#FBBF24]/40 hover:text-[#F0EDE6]"
-                    }`}
+                    className={`px-4 py-2 rounded-full text-xs font-semibold transition-all duration-300 border ${gradeFilter === g
+                      ? "bg-[#FBBF24] text-[#0F1623] border-[#FBBF24]"
+                      : "bg-transparent text-[#F0EDE6]/60 border-[#ffffff14] hover:border-[#FBBF24]/40 hover:text-[#F0EDE6]"
+                      }`}
                   >
                     {gradeLabels[g]}
                   </Link>

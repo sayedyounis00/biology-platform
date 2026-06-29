@@ -7,26 +7,6 @@ import { supabase, createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
 
-async function getData(): Promise<{ courseCount: number }> {
-  if (!supabase) {
-    return { courseCount: 0 };
-  }
-
-  try {
-    const countResult = await supabase
-      .from("courses")
-      .select("*", { count: "exact", head: true })
-      .eq("is_published", true);
-
-    return {
-      courseCount: countResult.count ?? 0,
-    };
-  } catch (error) {
-    console.error("Error fetching homepage data from Supabase:", error);
-    return { courseCount: 0 };
-  }
-}
-
 export default async function Home() {
   const cookieStore = await cookies();
   const userId = cookieStore.get("user_id")?.value;
@@ -34,8 +14,6 @@ export default async function Home() {
   if (userId) {
     redirect("/dashboard");
   }
-
-  const { courseCount } = await getData();
 
   return (
     <>
@@ -159,7 +137,7 @@ export default async function Home() {
 
             {/* Grid of three grade levels matching the uploaded image design */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-              {/* Card 1 — الصف الدراسي الأول */}
+              {/* Card 1 —  (علوم متكامله )الصف الأول الثانوي */}
               {/* Card 1 */}
               <Link
                 href="/courses?grade=1"
@@ -169,7 +147,7 @@ export default async function Home() {
                 <div className="aspect-[4/3] relative overflow-hidden bg-[#0A0E17]">
                   <Image
                     src="/biology_grade1.png"
-                    alt="الصف الدراسي الأول"
+                    alt=" (علوم متكامله )الصف الأول الثانوي"
                     fill
                     sizes="(max-width: 768px) 100vw, 33vw"
                     className="object-cover transition-transform duration-500 group-hover:scale-105"
@@ -179,10 +157,10 @@ export default async function Home() {
                 {/* Content Box */}
                 <div className="p-6 text-right flex flex-col gap-4">
                   <h3 className="text-[#F0EDE6] text-xl font-bold font-sans">
-                    الصف الأول الثانوي                  </h3>
+                    الصف الأول الثانوي    (علوم متكامله )              </h3>
                   <div className="h-[2px] w-full bg-teal-600/80 transition-colors group-hover:bg-teal-400" />
                   <p className="text-[#F0EDE6]/60 text-sm font-medium">
-                    جميع كورسات الصف الأول الثانوي
+                    جميع كورسات  الصف الأول الثانوي (علوم متكامله )
                   </p>
                 </div>
               </Link>
