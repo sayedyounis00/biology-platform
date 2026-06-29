@@ -5,6 +5,7 @@ import CopyButton from "@/components/ui/CopyButton";
 import { createClient } from "@/lib/supabase/server";
 import type { Course } from "@/types";
 import PaymentForm from "./PaymentForm";
+import { cookies } from "next/headers";
 
 const WALLET_NUMBER = '01016142501';   
 const WHATSAPP_NUMBER = '01006109432';
@@ -19,24 +20,23 @@ export default async function PaymentPage({
   const id = rawId.split("-").slice(0, 5).join("-");
 
   const supabaseClient = await createClient();
+  const cookieStore = await cookies();
+  const userId = cookieStore.get("user_id")?.value;
 
-  let user = null;
+  if (!userId) {
+    redirect("/login");
+  }
+
   let course: Course;
 
   try {
-    const [userRes, courseRes] = await Promise.all([
-      supabaseClient.auth.getUser(),
+    const [courseRes] = await Promise.all([
       supabaseClient
         .from("courses")
         .select("id, title, description, price, is_published")
         .eq("id", id)
         .single()
     ]);
-
-    user = userRes.data?.user || null;
-    if (!user) {
-      redirect("/login");
-    }
 
     if (courseRes.error || !courseRes.data) {
       notFound();
@@ -62,7 +62,7 @@ export default async function PaymentPage({
     const { data } = await supabaseClient
       .from("enrollments")
       .select("id")
-      .eq("user_id", user.id)
+      .eq("user_id", userId)
       .eq("course_id", course.id)
       .maybeSingle();
     enrollmentData = data;
@@ -161,7 +161,7 @@ export default async function PaymentPage({
           {/* Section 4 — Complete buying request form */}
           <PaymentForm
             courseId={course.id}
-            userId={user.id}
+            userId={userId}
             courseTitle={course.title}
           />
 

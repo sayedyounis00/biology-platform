@@ -3,11 +3,10 @@
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 
-export async function toggleLessonCompleteAction(lessonId: string, isCompleted: boolean) {
+export async function toggleLessonCompleteAction(lessonId: string, isCompleted: boolean, userId: string) {
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
 
-  if (!user) {
+  if (!userId) {
     return { success: false, error: "Unauthorized" };
   }
 
@@ -16,7 +15,7 @@ export async function toggleLessonCompleteAction(lessonId: string, isCompleted: 
     const { error } = await supabase
       .from("lesson_progress")
       .delete()
-      .eq("user_id", user.id)
+      .eq("user_id", userId)
       .eq("lesson_id", lessonId);
       
     if (error) {
@@ -26,7 +25,7 @@ export async function toggleLessonCompleteAction(lessonId: string, isCompleted: 
   } else {
     // Insert/Upsert progress (mark complete)
     const { error } = await supabase.from("lesson_progress").upsert({
-      user_id: user.id,
+      user_id: userId,
       lesson_id: lessonId,
       completed: true,
       completed_at: new Date().toISOString(),
@@ -44,16 +43,15 @@ export async function toggleLessonCompleteAction(lessonId: string, isCompleted: 
   return { success: true };
 }
 
-export async function markLessonCompleteAction(lessonId: string) {
+export async function markLessonCompleteAction(lessonId: string, userId: string) {
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
 
-  if (!user) {
+  if (!userId) {
     return { success: false, error: "Unauthorized" };
   }
 
   const { error } = await supabase.from("lesson_progress").upsert({
-    user_id: user.id,
+    user_id: userId,
     lesson_id: lessonId,
     completed: true,
     completed_at: new Date().toISOString(),

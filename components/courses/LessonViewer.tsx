@@ -177,6 +177,9 @@ export default function LessonViewer({
 
   const isCurrentCompleted = completedIds.has(lesson.id);
 
+  // ── Screen capture / screenshot protection state ──
+  const [captureBlocked, setCaptureBlocked] = useState(false);
+
   // Anti-Inspect security measures to deter regular students
   useEffect(() => {
     const handleContextMenu = (e: MouseEvent) => {
@@ -196,6 +199,20 @@ export default function LessonViewer({
       if (e.ctrlKey && (e.key === "U" || e.key === "u")) {
         e.preventDefault();
       }
+      // Block PrintScreen key
+      if (e.key === "PrintScreen") {
+        e.preventDefault();
+        // Overwrite clipboard with empty data
+        navigator.clipboard.writeText("").catch(() => { });
+        setCaptureBlocked(true);
+        setTimeout(() => setCaptureBlocked(false), 2000);
+      }
+      // Block Windows Snipping Tool (Win+Shift+S)
+      if (e.metaKey && e.shiftKey && (e.key === "S" || e.key === "s")) {
+        e.preventDefault();
+        setCaptureBlocked(true);
+        setTimeout(() => setCaptureBlocked(false), 2000);
+      }
     };
 
     document.addEventListener("contextmenu", handleContextMenu);
@@ -206,6 +223,179 @@ export default function LessonViewer({
       document.removeEventListener("keydown", handleKeyDown);
     };
   }, []);
+
+  // ── Inject CSS-based screen capture protection ──
+  // Uses CSS that makes content appear black in screen captures/recordings
+  useEffect(() => {
+    const styleEl = document.createElement("style");
+    styleEl.textContent = `
+      /* Make the lesson content black in screen recordings/captures */
+      .lesson-protected-content {
+        position: relative;
+      }
+
+      /* Overlay that is invisible normally but captured by screen recorders */
+      .lesson-protected-content::after {
+        content: "";
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        background: #000;
+        pointer-events: none;
+        z-index: 2147483647;
+        /* This mix-blend-mode trick makes the overlay invisible on screen
+           but screen capture tools often capture it as a solid black layer */
+        mix-blend-mode: difference;
+        opacity: 0;
+      }
+
+      /* Prevent text/content selection to block copy */
+      .lesson-protected-content {
+        -webkit-user-select: none;
+        -moz-user-select: none;
+        -ms-user-select: none;
+        user-select: none;
+      }
+
+      /* Block printing the page */
+      @media print {
+        body * {
+          display: none !important;
+        }
+        body::after {
+          content: "طباعة هذا المحتوى غير مسموح بها";
+          display: block;
+          text-align: center;
+          font-size: 24px;
+          padding: 100px;
+          color: #666;
+        }
+      }
+    `;
+    document.head.appendChild(styleEl);
+
+    return () => {
+      document.head.removeChild(styleEl);
+    };
+  }, []);
+
+  // ── Visibility and Focus detection — block screen and pause when lost focus ──
+  // This is highly effective against the Windows Snipping Tool and screen recorders that require focus change
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        setCaptureBlocked(true);
+        // Pause the video and mute audio
+        if (isDirectVideo && videoRef.current) {
+          videoRef.current.pause();
+          setIsPlaying(false);
+        } else if (youtubeUrl && ytPlayerReady && ytPlayerRef.current) {
+          try {
+            ytPlayerRef.current.pauseVideo();
+            setIsPlaying(false);
+          } catch { }
+        }
+      } else {
+        // Optionally remove block when visible again, but maybe delay it
+        setTimeout(() => setCaptureBlocked(false), 500);
+      }
+    };
+
+    const handleBlur = () => {
+      setCaptureBlocked(true);
+      // Pause the video
+      if (isDirectVideo && videoRef.current) {
+        videoRef.current.pause();
+        setIsPlaying(false);
+      } else if (youtubeUrl && ytPlayerReady && ytPlayerRef.current) {
+        try {
+          ytPlayerRef.current.pauseVideo();
+          setIsPlaying(false);
+        } catch { }
+      }
+    };
+
+    const handleFocus = () => {
+      setTimeout(() => setCaptureBlocked(false), 500);
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    window.addEventListener("blur", handleBlur);
+    window.addEventListener("focus", handleFocus);
+
+    // Initial check
+    if (!document.hasFocus()) {
+      handleBlur();
+    }
+
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      window.removeEventListener("blur", handleBlur);
+      window.removeEventListener("focus", handleFocus);
+    };
+  }, [isDirectVideo, youtubeUrl, ytPlayerReady]);
+
+  // ── Detect screen capture via Permissions API ──
+  useEffect(() => {
+    // Periodically check if display-capture permission was granted
+    const checkCapture = async () => {
+      try {
+        if (navigator.permissions) {
+          const status = await (navigator.permissions as any).query({ name: "display-capture" as any });
+          if (status.state === "granted") {
+            // Someone is screen-sharing/recording
+            setCaptureBlocked(true);
+            // Pause video
+            if (isDirectVideo && videoRef.current) {
+              videoRef.current.pause();
+              videoRef.current.muted = true;
+              setIsPlaying(false);
+              setIsMuted(true);
+            } else if (youtubeUrl && ytPlayerReady && ytPlayerRef.current) {
+              try {
+                ytPlayerRef.current.pauseVideo();
+                ytPlayerRef.current.mute();
+                setIsPlaying(false);
+                setIsMuted(true);
+              } catch { }
+            }
+          }
+        }
+      } catch {
+        // Permission query not supported for display-capture in most browsers — that's fine
+      }
+    };
+
+    const interval = setInterval(checkCapture, 3000);
+    return () => clearInterval(interval);
+  }, [isDirectVideo, youtubeUrl, ytPlayerReady]);
+
+  // ── Detect Picture-in-Picture (PiP) to prevent recording via PiP ──
+  useEffect(() => {
+    const handlePiP = (e: Event) => {
+      e.preventDefault();
+      setCaptureBlocked(true);
+      setTimeout(() => setCaptureBlocked(false), 2000);
+      // Exit PiP immediately
+      if (document.pictureInPictureElement) {
+        document.exitPictureInPicture().catch(() => { });
+      }
+    };
+
+    if (videoRef.current) {
+      videoRef.current.addEventListener("enterpictureinpicture", handlePiP);
+      // Disable PiP on the video element
+      videoRef.current.disablePictureInPicture = true;
+    }
+
+    return () => {
+      if (videoRef.current) {
+        videoRef.current.removeEventListener("enterpictureinpicture", handlePiP);
+      }
+    };
+  }, [isDirectVideo, decodedVideoUrl]);
 
   // ── Toggle completion (manual button click) ──
   const handleToggleComplete = async (targetId: string) => {
@@ -233,7 +423,7 @@ export default function LessonViewer({
 
     // 2. Send to server in the background
     try {
-      const res = await toggleLessonCompleteAction(targetId, wasCompleted);
+      const res = await toggleLessonCompleteAction(targetId, wasCompleted, userId);
       if (!res.success) {
         console.error("Server toggle failed:", res.error);
       } else {
@@ -274,7 +464,7 @@ export default function LessonViewer({
 
     // 2. Send to server in the background
     try {
-      const res = await markLessonCompleteAction(targetId);
+      const res = await markLessonCompleteAction(targetId, userId);
       if (!res.success) {
         console.error("Server mark-complete failed:", res.error);
       }
@@ -566,399 +756,413 @@ export default function LessonViewer({
   const progressPercentage = totalLessons > 0 ? Math.round((completedCount / totalLessons) * 100) : 0;
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+    <div className="lesson-protected-content">
 
-      {/* Right/Main Content: Video Player and Details */}
-      <div className="lg:col-span-2 flex flex-col gap-6">
+      {/* Screenshot/Recording blocked overlay */}
+      {captureBlocked && (
+        <div className="fixed inset-0 z-[9999] bg-black flex items-center justify-center" style={{ pointerEvents: "all" }}>
+          <div className="text-center">
+            <svg className="w-20 h-20 text-red-500 mx-auto mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+            </svg>
+            <h2 className="text-2xl font-bold text-red-500 mb-2">تسجيل الشاشة غير مسموح</h2>
+            <p className="text-white/60 text-sm">لا يمكن التقاط صورة للشاشة أو تسجيل الفيديو في هذه الصفحة</p>
+          </div>
+        </div>
+      )}
 
-        {/* Custom Interactive Video Player Box */}
-        <div className="flex flex-col gap-3">
-          <div ref={videoContainerRef} className="relative w-full aspect-video rounded-2xl overflow-hidden border border-white/10 bg-[#1A2235] shadow-2xl">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
 
-            {/* The transparent click blocker overlay */}
-            <div className="absolute inset-0 bg-transparent z-20 pointer-events-auto cursor-default" />
+        {/* Right/Main Content: Video Player and Details */}
+        <div className="lg:col-span-2 flex flex-col gap-6">
 
-            {/* Fullscreen ESC toast overlay */}
-            <div
-              className={`absolute top-4 left-1/2 -translate-x-1/2 z-30 bg-black/85 backdrop-blur-md text-[#F0EDE6] text-sm px-5 py-2.5 rounded-xl border border-white/10 shadow-lg pointer-events-none transition-all duration-500 flex items-center gap-1.5 ${showFsToast ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-4"
-                }`}
-            >
-              <span>اضغط</span>
-              <kbd className="px-2 py-0.5 rounded bg-white/20 font-mono text-xs text-[#FBBF24] border border-white/10">ESC</kbd>
-              <span>للمغادرة من وضع ملء الشاشة</span>
+          {/* Custom Interactive Video Player Box */}
+          <div className="flex flex-col gap-3">
+            <div ref={videoContainerRef} className="relative w-full aspect-video rounded-2xl overflow-hidden border border-white/10 bg-[#1A2235] shadow-2xl">
+
+              {/* The transparent click blocker overlay */}
+              <div className="absolute inset-0 bg-transparent z-20 pointer-events-auto cursor-default" />
+
+              {/* Fullscreen ESC toast overlay */}
+              <div
+                className={`absolute top-4 left-1/2 -translate-x-1/2 z-30 bg-black/85 backdrop-blur-md text-[#F0EDE6] text-sm px-5 py-2.5 rounded-xl border border-white/10 shadow-lg pointer-events-none transition-all duration-500 flex items-center gap-1.5 ${showFsToast ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-4"
+                  }`}
+              >
+                <span>اضغط</span>
+                <kbd className="px-2 py-0.5 rounded bg-white/20 font-mono text-xs text-[#FBBF24] border border-white/10">ESC</kbd>
+                <span>للمغادرة من وضع ملء الشاشة</span>
+              </div>
+
+              {youtubeUrl ? (
+                <iframe
+                  id="youtube-iframe"
+                  src={youtubeUrl}
+                  className="absolute inset-0 w-full h-full border-0 pointer-events-none"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  title={lesson.title}
+                />
+              ) : vimeoUrl ? (
+                <iframe
+                  src={vimeoUrl}
+                  className="absolute inset-0 w-full h-full border-0 pointer-events-none"
+                  allow="autoplay; fullscreen"
+                  title={lesson.title}
+                />
+              ) : isDirectVideo && decodedVideoUrl ? (
+                <video
+                  ref={videoRef}
+                  src={decodedVideoUrl}
+                  autoPlay
+                  muted={isMuted}
+                  onPlay={() => setIsPlaying(true)}
+                  onPause={() => setIsPlaying(false)}
+                  onTimeUpdate={handleTimeUpdate}
+                  onDurationChange={handleDurationChange}
+                  className="absolute inset-0 w-full h-full object-cover pointer-events-none"
+                />
+              ) : (
+                <div className="absolute inset-0 flex flex-col items-center justify-center text-[#F0EDE6]/40 p-6 text-center gap-3">
+                  <svg className="w-16 h-16 opacity-30" fill="none" stroke="currentColor" strokeWidth="1" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M3.375 19.5h17.25m-17.25 0a1.125 1.125 0 01-1.125-1.125M3.375 19.5h7.5c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125m-7.5 3.75h7.5m-7.5 0h7.5m8.625-10.5H12m8.625 0a9 9 0 11-18 0 9 9 0 0118 0zm-8.625 0H12" />
+                  </svg>
+                  <p className="text-lg font-medium">لا يوجد فيديو متوفر لهذا الدرس</p>
+                </div>
+              )}
             </div>
 
-            {youtubeUrl ? (
-              <iframe
-                id="youtube-iframe"
-                src={youtubeUrl}
-                className="absolute inset-0 w-full h-full border-0 pointer-events-none"
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                title={lesson.title}
-              />
-            ) : vimeoUrl ? (
-              <iframe
-                src={vimeoUrl}
-                className="absolute inset-0 w-full h-full border-0 pointer-events-none"
-                allow="autoplay; fullscreen"
-                title={lesson.title}
-              />
-            ) : isDirectVideo && decodedVideoUrl ? (
-              <video
-                ref={videoRef}
-                src={decodedVideoUrl}
-                autoPlay
-                muted={isMuted}
-                onPlay={() => setIsPlaying(true)}
-                onPause={() => setIsPlaying(false)}
-                onTimeUpdate={handleTimeUpdate}
-                onDurationChange={handleDurationChange}
-                className="absolute inset-0 w-full h-full object-cover pointer-events-none"
-              />
-            ) : (
-              <div className="absolute inset-0 flex flex-col items-center justify-center text-[#F0EDE6]/40 p-6 text-center gap-3">
-                <svg className="w-16 h-16 opacity-30" fill="none" stroke="currentColor" strokeWidth="1" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M3.375 19.5h17.25m-17.25 0a1.125 1.125 0 01-1.125-1.125M3.375 19.5h7.5c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125m-7.5 3.75h7.5m-7.5 0h7.5m8.625-10.5H12m8.625 0a9 9 0 11-18 0 9 9 0 0118 0zm-8.625 0H12" />
-                </svg>
-                <p className="text-lg font-medium">لا يوجد فيديو متوفر لهذا الدرس</p>
+            {/* Unified Custom Controller Bar */}
+            <div className="rounded-2xl bg-[#1A2235] border border-white/10 p-4 shadow-xl flex flex-col gap-3" dir="rtl">
+
+              {/* Timeline seek bar */}
+              <div className="flex items-center gap-3 flex-row">
+                <span className="text-xs font-mono text-[#F0EDE6]/60 w-10 text-right">{formatTime(currentTime)}</span>
+                <input
+                  type="range"
+                  min={0}
+                  max={duration || 100}
+                  value={currentTime}
+                  onChange={(e) => handleSeekChange(Number(e.target.value))}
+                  className="flex-1 h-1.5 bg-white/10 rounded-lg appearance-none cursor-pointer accent-[#FBBF24] hover:accent-[#FBBF24]/90"
+                />
+                <span className="text-xs font-mono text-[#F0EDE6]/60 w-10 text-left">{formatTime(duration)}</span>
               </div>
+
+              {/* Controls panel */}
+              <div className="flex items-center justify-between flex-wrap gap-4">
+
+                {/* Playback Controls (Play/Pause, Rewind, Fast Forward) */}
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={handleRewind10}
+                    title="رجوع 10 ثواني"
+                    className="p-2 rounded-lg bg-white/5 hover:bg-white/10 text-[#F0EDE6] active:scale-95 transition-all cursor-pointer"
+                  >
+                    <RotateCcw className="w-4 h-4" />
+                  </button>
+
+                  <button
+                    onClick={handlePlayPause}
+                    title={isPlaying ? "إيقاف مؤقت" : "تشغيل"}
+                    className="p-2.5 rounded-xl bg-[#FBBF24] hover:bg-[#FBBF24]/90 text-[#0F1623] active:scale-95 transition-all cursor-pointer"
+                  >
+                    {isPlaying ? <Pause className="w-5 h-5 fill-current" /> : <Play className="w-5 h-5 fill-current" />}
+                  </button>
+
+                  <button
+                    onClick={handleForward10}
+                    title="تقديم 10 ثواني"
+                    className="p-2 rounded-lg bg-white/5 hover:bg-white/10 text-[#F0EDE6] active:scale-95 transition-all cursor-pointer"
+                  >
+                    <RotateCw className="w-4 h-4" />
+                  </button>
+                </div>
+
+                {/* Speed Controller */}
+                <div className="flex items-center gap-1 bg-white/5 p-1 rounded-xl border border-white/5">
+                  {[1, 1.5, 2, 3].map((speed) => (
+                    <button
+                      key={speed}
+                      onClick={() => handleSpeedChange(speed)}
+                      className={`px-3 py-1 rounded-lg text-xs font-bold font-mono transition-all cursor-pointer ${playbackSpeed === speed
+                        ? "bg-[#FBBF24] text-[#0F1623]"
+                        : "text-[#F0EDE6]/70 hover:text-[#F0EDE6]"
+                        }`}
+                    >
+                      {speed}x
+                    </button>
+                  ))}
+                </div>
+
+                {/* Quality Selector, Mute, and Fullscreen */}
+                <div className="flex items-center gap-3">
+
+                  {/* Video Quality Dropdown */}
+                  <div ref={qualityMenuRef} className="relative">
+                    <button
+                      onClick={() => setShowQualityMenu(!showQualityMenu)}
+                      title="جودة الفيديو"
+                      className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${showQualityMenu
+                          ? "bg-[#FBBF24]/15 border border-[#FBBF24]/30 text-[#FBBF24]"
+                          : "bg-white/5 hover:bg-white/10 text-[#F0EDE6]/70 hover:text-[#F0EDE6]"
+                        }`}
+                    >
+                      <Settings className="w-3.5 h-3.5" />
+                      <span className="font-mono">{videoQuality}p</span>
+                      <ChevronDown className={`w-3 h-3 transition-transform duration-200 ${showQualityMenu ? "rotate-180" : ""}`} />
+                    </button>
+
+                    {/* Dropdown Menu */}
+                    {showQualityMenu && (
+                      <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 bg-[#1A2235] border border-white/15 rounded-xl shadow-2xl overflow-hidden z-50 min-w-[120px] animate-in fade-in slide-in-from-bottom-2 duration-200">
+                        <div className="px-3 py-2 text-[10px] font-bold text-[#F0EDE6]/40 uppercase tracking-wider border-b border-white/5">
+                          جودة الفيديو
+                        </div>
+                        {(["720", "480"] as const).map((q) => (
+                          <button
+                            key={q}
+                            onClick={() => handleQualityChange(q)}
+                            className={`w-full flex items-center justify-between px-3 py-2.5 text-sm font-medium transition-all cursor-pointer ${videoQuality === q
+                                ? "bg-[#FBBF24]/10 text-[#FBBF24]"
+                                : "text-[#F0EDE6]/70 hover:bg-white/5 hover:text-[#F0EDE6]"
+                              }`}
+                          >
+                            <span className="font-mono font-bold">{q}p</span>
+                            {videoQuality === q && (
+                              <Check className="w-3.5 h-3.5 text-[#FBBF24]" />
+                            )}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  <button
+                    onClick={handleMuteToggle}
+                    title={isMuted ? "إلغاء كتم الصوت" : "كتم الصوت"}
+                    className={`p-2 rounded-lg transition-all cursor-pointer ${isMuted
+                      ? "bg-red-500/10 border border-red-500/20 text-red-400 hover:bg-red-500/20"
+                      : "bg-white/5 hover:bg-white/10 text-[#FBBF24]"
+                      }`}
+                  >
+                    {isMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
+                  </button>
+
+                  <button
+                    onClick={handleFullscreenToggle}
+                    title={isFullscreen ? "خروج من ملء الشاشة" : "ملء الشاشة"}
+                    className="p-2 rounded-lg bg-white/5 hover:bg-white/10 text-[#F0EDE6] hover:text-[#FBBF24] active:scale-95 transition-all cursor-pointer"
+                  >
+                    {isFullscreen ? <Minimize className="w-4 h-4" /> : <Maximize className="w-4 h-4" />}
+                  </button>
+                </div>
+
+              </div>
+
+            </div>
+          </div>
+
+          {/* Lesson Details Card */}
+          <div className="rounded-2xl bg-[#1A2235] border border-white/10 p-6 md:p-8 shadow-xl flex flex-col gap-6 text-right">
+
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div>
+                <h1 className="text-2xl md:text-3xl font-bold text-[#F0EDE6] leading-tight">
+                  {lesson.title}
+                </h1>
+
+                <div className="flex items-center gap-2 text-xs text-[#F0EDE6]/40 mt-2">
+                  <span className="bg-white/5 px-2.5 py-1 rounded-md text-[#FBBF24] font-medium font-mono">
+                    الدرس {lesson.order_index ?? allLessons.findIndex(l => l.id === lesson.id) + 1}
+                  </span>
+                  <span>•</span>
+                  <span>
+                    تم النشر في:{" "}
+                    {new Date(lesson.created_at).toLocaleDateString("ar-EG", {
+                      year: "numeric",
+                      month: "long",
+                      day: "numeric",
+                    })}
+                  </span>
+                </div>
+              </div>
+
+              {/* Mark as Complete Button */}
+              <button
+                onClick={() => handleToggleComplete(lesson.id)}
+                className={`flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm transition-all duration-300 cursor-pointer ${isCurrentCompleted
+                  ? "bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/20"
+                  : "bg-[#FBBF24] text-[#0F1623] hover:bg-[#FBBF24]/90"
+                  }`}
+              >
+                {isCurrentCompleted ? (
+                  <>
+                    <Check className="w-4 h-4" />
+                    <span>اكتمل الدرس</span>
+                  </>
+                ) : (
+                  <>
+                    <Circle className="w-4 h-4" />
+                    <span>تحديد كمكتمل</span>
+                  </>
+                )}
+              </button>
+            </div>
+
+            {/* Progress Bar (Main details area) */}
+            <div className="bg-[#0F1623] border border-white/5 rounded-2xl p-4 flex flex-col gap-2">
+              <div className="flex items-center justify-between text-xs text-[#F0EDE6]/60 flex-row-reverse">
+                <span className="font-mono text-sm font-semibold">{progressPercentage}%</span>
+                <span className="font-bold text-[#FBBF24]">مدى تقدمك في الكورس</span>
+              </div>
+              <div className="w-full h-2.5 bg-white/5 rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-gradient-to-l from-[#FBBF24] to-amber-500 transition-all duration-500 ease-out"
+                  style={{ width: `${progressPercentage}%` }}
+                />
+              </div>
+              <div className="flex justify-between text-xs text-[#F0EDE6]/40 mt-1 flex-row-reverse">
+                <span>تم إكمال {completedCount} من أصل {totalLessons} دروس</span>
+              </div>
+            </div>
+
+            <div className="h-px bg-white/10 w-full" />
+
+            {lesson.content ? (
+              <div className="text-[#F0EDE6]/80 text-sm md:text-base leading-relaxed whitespace-pre-wrap">
+                {lesson.content}
+              </div>
+            ) : (
+              <p className="text-[#F0EDE6]/40 italic text-sm">لا توجد تفاصيل أو وصف متوفر لهذا الدرس.</p>
             )}
           </div>
 
-          {/* Unified Custom Controller Bar */}
-          <div className="rounded-2xl bg-[#1A2235] border border-white/10 p-4 shadow-xl flex flex-col gap-3" dir="rtl">
+          {/* Attachments Section */}
+          {attachments.length > 0 && (
+            <div className="rounded-2xl bg-[#1A2235] border border-white/10 p-6 md:p-8 shadow-xl flex flex-col gap-5 text-right">
 
-            {/* Timeline seek bar */}
-            <div className="flex items-center gap-3 flex-row">
-              <span className="text-xs font-mono text-[#F0EDE6]/60 w-10 text-right">{formatTime(currentTime)}</span>
-              <input
-                type="range"
-                min={0}
-                max={duration || 100}
-                value={currentTime}
-                onChange={(e) => handleSeekChange(Number(e.target.value))}
-                className="flex-1 h-1.5 bg-white/10 rounded-lg appearance-none cursor-pointer accent-[#FBBF24] hover:accent-[#FBBF24]/90"
-              />
-              <span className="text-xs font-mono text-[#F0EDE6]/60 w-10 text-left">{formatTime(duration)}</span>
-            </div>
-
-            {/* Controls panel */}
-            <div className="flex items-center justify-between flex-wrap gap-4">
-
-              {/* Playback Controls (Play/Pause, Rewind, Fast Forward) */}
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={handleRewind10}
-                  title="رجوع 10 ثواني"
-                  className="p-2 rounded-lg bg-white/5 hover:bg-white/10 text-[#F0EDE6] active:scale-95 transition-all cursor-pointer"
-                >
-                  <RotateCcw className="w-4 h-4" />
-                </button>
-
-                <button
-                  onClick={handlePlayPause}
-                  title={isPlaying ? "إيقاف مؤقت" : "تشغيل"}
-                  className="p-2.5 rounded-xl bg-[#FBBF24] hover:bg-[#FBBF24]/90 text-[#0F1623] active:scale-95 transition-all cursor-pointer"
-                >
-                  {isPlaying ? <Pause className="w-5 h-5 fill-current" /> : <Play className="w-5 h-5 fill-current" />}
-                </button>
-
-                <button
-                  onClick={handleForward10}
-                  title="تقديم 10 ثواني"
-                  className="p-2 rounded-lg bg-white/5 hover:bg-white/10 text-[#F0EDE6] active:scale-95 transition-all cursor-pointer"
-                >
-                  <RotateCw className="w-4 h-4" />
-                </button>
+              {/* Section Header */}
+              <div className="flex items-center gap-3 border-b border-white/10 pb-4">
+                <div className="w-10 h-10 rounded-xl bg-[#FBBF24]/10 border border-[#FBBF24]/20 flex items-center justify-center flex-shrink-0">
+                  <FileText className="w-5 h-5 text-[#FBBF24]" />
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-lg font-bold text-[#F0EDE6]">المرفقات</h3>
+                  <p className="text-xs text-[#F0EDE6]/40 mt-0.5">
+                    ملفات مرفقة مع هذا الدرس
+                  </p>
+                </div>
+                <span className="text-xs text-[#F0EDE6]/50 bg-white/5 px-2.5 py-1 rounded-full font-bold font-mono">
+                  {attachments.length} ملف
+                </span>
               </div>
 
-              {/* Speed Controller */}
-              <div className="flex items-center gap-1 bg-white/5 p-1 rounded-xl border border-white/5">
-                {[1, 1.5, 2, 3].map((speed) => (
-                  <button
-                    key={speed}
-                    onClick={() => handleSpeedChange(speed)}
-                    className={`px-3 py-1 rounded-lg text-xs font-bold font-mono transition-all cursor-pointer ${playbackSpeed === speed
-                      ? "bg-[#FBBF24] text-[#0F1623]"
-                      : "text-[#F0EDE6]/70 hover:text-[#F0EDE6]"
-                      }`}
+              {/* Attachment Items */}
+              <div className="flex flex-col gap-3">
+                {attachments.map((attachment) => (
+                  <div
+                    key={attachment.id}
+                    className="group flex items-center gap-4 p-4 rounded-xl bg-[#0F1623] border border-white/5 hover:border-[#FBBF24]/20 transition-all duration-300"
                   >
-                    {speed}x
-                  </button>
+                    {/* PDF Icon */}
+                    <div className="w-12 h-12 rounded-xl bg-red-500/10 border border-red-500/15 flex items-center justify-center flex-shrink-0 group-hover:bg-red-500/15 transition-colors">
+                      <FileText className="w-6 h-6 text-red-400" />
+                    </div>
+
+                    {/* File Info */}
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-bold text-[#F0EDE6] truncate group-hover:text-[#FBBF24] transition-colors" dir="ltr" style={{ textAlign: "right" }}>
+                        {attachment.name}
+                      </p>
+                      <p className="text-xs text-[#F0EDE6]/40 mt-0.5 font-mono">
+                        ملف مرفق
+                      </p>
+                    </div>
+
+                    {/* Download Button */}
+                    <a
+                      href={attachment.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      download
+                      className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#FBBF24]/10 border border-[#FBBF24]/20 text-[#FBBF24] hover:bg-[#FBBF24] hover:text-[#0F1623] font-bold text-xs transition-all duration-300 cursor-pointer active:scale-95 flex-shrink-0"
+                    >
+                      <Download className="w-4 h-4" />
+                      <span>تحميل</span>
+                    </a>
+                  </div>
                 ))}
               </div>
-
-              {/* Quality Selector, Mute, and Fullscreen */}
-              <div className="flex items-center gap-3">
-
-                {/* Video Quality Dropdown */}
-                <div ref={qualityMenuRef} className="relative">
-                  <button
-                    onClick={() => setShowQualityMenu(!showQualityMenu)}
-                    title="جودة الفيديو"
-                    className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                      showQualityMenu
-                        ? "bg-[#FBBF24]/15 border border-[#FBBF24]/30 text-[#FBBF24]"
-                        : "bg-white/5 hover:bg-white/10 text-[#F0EDE6]/70 hover:text-[#F0EDE6]"
-                    }`}
-                  >
-                    <Settings className="w-3.5 h-3.5" />
-                    <span className="font-mono">{videoQuality}p</span>
-                    <ChevronDown className={`w-3 h-3 transition-transform duration-200 ${showQualityMenu ? "rotate-180" : ""}`} />
-                  </button>
-
-                  {/* Dropdown Menu */}
-                  {showQualityMenu && (
-                    <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 bg-[#1A2235] border border-white/15 rounded-xl shadow-2xl overflow-hidden z-50 min-w-[120px] animate-in fade-in slide-in-from-bottom-2 duration-200">
-                      <div className="px-3 py-2 text-[10px] font-bold text-[#F0EDE6]/40 uppercase tracking-wider border-b border-white/5">
-                        جودة الفيديو
-                      </div>
-                      {(["720", "480"] as const).map((q) => (
-                        <button
-                          key={q}
-                          onClick={() => handleQualityChange(q)}
-                          className={`w-full flex items-center justify-between px-3 py-2.5 text-sm font-medium transition-all cursor-pointer ${
-                            videoQuality === q
-                              ? "bg-[#FBBF24]/10 text-[#FBBF24]"
-                              : "text-[#F0EDE6]/70 hover:bg-white/5 hover:text-[#F0EDE6]"
-                          }`}
-                        >
-                          <span className="font-mono font-bold">{q}p</span>
-                          {videoQuality === q && (
-                            <Check className="w-3.5 h-3.5 text-[#FBBF24]" />
-                          )}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                <button
-                  onClick={handleMuteToggle}
-                  title={isMuted ? "إلغاء كتم الصوت" : "كتم الصوت"}
-                  className={`p-2 rounded-lg transition-all cursor-pointer ${isMuted
-                    ? "bg-red-500/10 border border-red-500/20 text-red-400 hover:bg-red-500/20"
-                    : "bg-white/5 hover:bg-white/10 text-[#FBBF24]"
-                    }`}
-                >
-                  {isMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
-                </button>
-
-                <button
-                  onClick={handleFullscreenToggle}
-                  title={isFullscreen ? "خروج من ملء الشاشة" : "ملء الشاشة"}
-                  className="p-2 rounded-lg bg-white/5 hover:bg-white/10 text-[#F0EDE6] hover:text-[#FBBF24] active:scale-95 transition-all cursor-pointer"
-                >
-                  {isFullscreen ? <Minimize className="w-4 h-4" /> : <Maximize className="w-4 h-4" />}
-                </button>
-              </div>
-
             </div>
-
-          </div>
-        </div>
-
-        {/* Lesson Details Card */}
-        <div className="rounded-2xl bg-[#1A2235] border border-white/10 p-6 md:p-8 shadow-xl flex flex-col gap-6 text-right">
-
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div>
-              <h1 className="text-2xl md:text-3xl font-bold text-[#F0EDE6] leading-tight">
-                {lesson.title}
-              </h1>
-
-              <div className="flex items-center gap-2 text-xs text-[#F0EDE6]/40 mt-2">
-                <span className="bg-white/5 px-2.5 py-1 rounded-md text-[#FBBF24] font-medium font-mono">
-                  الدرس {lesson.order_index ?? allLessons.findIndex(l => l.id === lesson.id) + 1}
-                </span>
-                <span>•</span>
-                <span>
-                  تم النشر في:{" "}
-                  {new Date(lesson.created_at).toLocaleDateString("ar-EG", {
-                    year: "numeric",
-                    month: "long",
-                    day: "numeric",
-                  })}
-                </span>
-              </div>
-            </div>
-
-            {/* Mark as Complete Button */}
-            <button
-              onClick={() => handleToggleComplete(lesson.id)}
-              className={`flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm transition-all duration-300 cursor-pointer ${isCurrentCompleted
-                ? "bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/20"
-                : "bg-[#FBBF24] text-[#0F1623] hover:bg-[#FBBF24]/90"
-                }`}
-            >
-              {isCurrentCompleted ? (
-                <>
-                  <Check className="w-4 h-4" />
-                  <span>اكتمل الدرس</span>
-                </>
-              ) : (
-                <>
-                  <Circle className="w-4 h-4" />
-                  <span>تحديد كمكتمل</span>
-                </>
-              )}
-            </button>
-          </div>
-
-          {/* Progress Bar (Main details area) */}
-          <div className="bg-[#0F1623] border border-white/5 rounded-2xl p-4 flex flex-col gap-2">
-            <div className="flex items-center justify-between text-xs text-[#F0EDE6]/60 flex-row-reverse">
-              <span className="font-mono text-sm font-semibold">{progressPercentage}%</span>
-              <span className="font-bold text-[#FBBF24]">مدى تقدمك في الكورس</span>
-            </div>
-            <div className="w-full h-2.5 bg-white/5 rounded-full overflow-hidden">
-              <div
-                className="h-full bg-gradient-to-l from-[#FBBF24] to-amber-500 transition-all duration-500 ease-out"
-                style={{ width: `${progressPercentage}%` }}
-              />
-            </div>
-            <div className="flex justify-between text-xs text-[#F0EDE6]/40 mt-1 flex-row-reverse">
-              <span>تم إكمال {completedCount} من أصل {totalLessons} دروس</span>
-            </div>
-          </div>
-
-          <div className="h-px bg-white/10 w-full" />
-
-          {lesson.content ? (
-            <div className="text-[#F0EDE6]/80 text-sm md:text-base leading-relaxed whitespace-pre-wrap">
-              {lesson.content}
-            </div>
-          ) : (
-            <p className="text-[#F0EDE6]/40 italic text-sm">لا توجد تفاصيل أو وصف متوفر لهذا الدرس.</p>
           )}
+
         </div>
 
-        {/* Attachments Section */}
-        {attachments.length > 0 && (
-          <div className="rounded-2xl bg-[#1A2235] border border-white/10 p-6 md:p-8 shadow-xl flex flex-col gap-5 text-right">
+        {/* Left Column: Lessons Sidebar Navigation */}
+        <div className="flex flex-col gap-6 text-right">
+          <div className="rounded-2xl bg-[#1A2235] border border-white/10 p-6 shadow-xl flex flex-col gap-4">
 
-            {/* Section Header */}
-            <div className="flex items-center gap-3 border-b border-white/10 pb-4">
-              <div className="w-10 h-10 rounded-xl bg-[#FBBF24]/10 border border-[#FBBF24]/20 flex items-center justify-center flex-shrink-0">
-                <FileText className="w-5 h-5 text-[#FBBF24]" />
-              </div>
-              <div className="flex-1">
-                <h3 className="text-lg font-bold text-[#F0EDE6]">المرفقات</h3>
-                <p className="text-xs text-[#F0EDE6]/40 mt-0.5">
-                  ملفات مرفقة مع هذا الدرس
-                </p>
-              </div>
-              <span className="text-xs text-[#F0EDE6]/50 bg-white/5 px-2.5 py-1 rounded-full font-bold font-mono">
-                {attachments.length} ملف
+            <div className="flex items-center justify-between border-b border-white/10 pb-3 flex-row-reverse">
+              <h3 className="font-bold text-lg text-[#FBBF24]">دروس الكورس</h3>
+              <span className="text-xs text-[#F0EDE6]/50 bg-white/5 px-2.5 py-1 rounded-full font-bold">
+                {allLessons.length} دروس
               </span>
             </div>
 
-            {/* Attachment Items */}
-            <div className="flex flex-col gap-3">
-              {attachments.map((attachment) => (
+            {/* Progress Bar inside Sidebar */}
+            <div className="flex flex-col gap-1.5 pt-1">
+              <div className="flex items-center justify-between text-xs text-[#F0EDE6]/60 flex-row-reverse">
+                <span className="font-mono font-bold text-[#FBBF24]">{progressPercentage}%</span>
+                <span>نسبة الإنجاز:</span>
+              </div>
+              <div className="w-full h-2 bg-[#0F1623] rounded-full overflow-hidden">
                 <div
-                  key={attachment.id}
-                  className="group flex items-center gap-4 p-4 rounded-xl bg-[#0F1623] border border-white/5 hover:border-[#FBBF24]/20 transition-all duration-300"
-                >
-                  {/* PDF Icon */}
-                  <div className="w-12 h-12 rounded-xl bg-red-500/10 border border-red-500/15 flex items-center justify-center flex-shrink-0 group-hover:bg-red-500/15 transition-colors">
-                    <FileText className="w-6 h-6 text-red-400" />
-                  </div>
+                  className="h-full bg-[#FBBF24] transition-all duration-500 ease-out"
+                  style={{ width: `${progressPercentage}%` }}
+                />
+              </div>
+            </div>
 
-                  {/* File Info */}
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-bold text-[#F0EDE6] truncate group-hover:text-[#FBBF24] transition-colors" dir="ltr" style={{ textAlign: "right" }}>
-                      {attachment.name}
-                    </p>
-                    <p className="text-xs text-[#F0EDE6]/40 mt-0.5 font-mono">
-                      ملف مرفق
-                    </p>
-                  </div>
-
-                  {/* Download Button */}
-                  <a
-                    href={attachment.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    download
-                    className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#FBBF24]/10 border border-[#FBBF24]/20 text-[#FBBF24] hover:bg-[#FBBF24] hover:text-[#0F1623] font-bold text-xs transition-all duration-300 cursor-pointer active:scale-95 flex-shrink-0"
+            <div className="flex flex-col gap-2 max-h-[400px] lg:max-h-[600px] overflow-y-auto pr-1">
+              {allLessons.map((item, index) => {
+                const isCurrent = item.id === lesson.id;
+                const isCompleted = completedIds.has(item.id);
+                return (
+                  <Link
+                    key={item.id}
+                    href={`/courses/${rawId}/lessons/${item.id}`}
+                    className={`flex items-start gap-3 p-3 rounded-xl transition-all duration-200 border relative overflow-hidden group ${isCurrent
+                      ? "bg-[#0F1623] border-[#FBBF24]/40 text-[#FBBF24] font-bold shadow-md shadow-black/10"
+                      : "bg-white/5 border-transparent text-[#F0EDE6]/80 hover:bg-white/10 hover:text-[#FBBF24]"
+                      }`}
                   >
-                    <Download className="w-4 h-4" />
-                    <span>تحميل</span>
-                  </a>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
+                    <span className={`text-xs font-mono font-bold w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 relative z-10 ${isCurrent ? "bg-[#FBBF24] text-[#0F1623]" : isCompleted ? "bg-emerald-500/20 text-emerald-400" : "bg-white/10 text-[#F0EDE6]/60"
+                      }`}>
+                      {isCompleted ? <Check className="w-3.5 h-3.5" /> : item.order_index ?? index + 1}
+                    </span>
 
-      </div>
+                    <span className="text-sm line-clamp-2 leading-snug relative z-10">
+                      {item.title}
+                    </span>
 
-      {/* Left Column: Lessons Sidebar Navigation */}
-      <div className="flex flex-col gap-6 text-right">
-        <div className="rounded-2xl bg-[#1A2235] border border-white/10 p-6 shadow-xl flex flex-col gap-4">
-
-          <div className="flex items-center justify-between border-b border-white/10 pb-3 flex-row-reverse">
-            <h3 className="font-bold text-lg text-[#FBBF24]">دروس الكورس</h3>
-            <span className="text-xs text-[#F0EDE6]/50 bg-white/5 px-2.5 py-1 rounded-full font-bold">
-              {allLessons.length} دروس
-            </span>
-          </div>
-
-          {/* Progress Bar inside Sidebar */}
-          <div className="flex flex-col gap-1.5 pt-1">
-            <div className="flex items-center justify-between text-xs text-[#F0EDE6]/60 flex-row-reverse">
-              <span className="font-mono font-bold text-[#FBBF24]">{progressPercentage}%</span>
-              <span>نسبة الإنجاز:</span>
-            </div>
-            <div className="w-full h-2 bg-[#0F1623] rounded-full overflow-hidden">
-              <div
-                className="h-full bg-[#FBBF24] transition-all duration-500 ease-out"
-                style={{ width: `${progressPercentage}%` }}
-              />
+                    {isCompleted && !isCurrent && (
+                      <div className="absolute top-0 right-0 w-1.5 h-full bg-emerald-500/40" />
+                    )}
+                  </Link>
+                );
+              })}
             </div>
           </div>
 
-          <div className="flex flex-col gap-2 max-h-[400px] lg:max-h-[600px] overflow-y-auto pr-1">
-            {allLessons.map((item, index) => {
-              const isCurrent = item.id === lesson.id;
-              const isCompleted = completedIds.has(item.id);
-              return (
-                <Link
-                  key={item.id}
-                  href={`/courses/${rawId}/lessons/${item.id}`}
-                  className={`flex items-start gap-3 p-3 rounded-xl transition-all duration-200 border relative overflow-hidden group ${isCurrent
-                    ? "bg-[#0F1623] border-[#FBBF24]/40 text-[#FBBF24] font-bold shadow-md shadow-black/10"
-                    : "bg-white/5 border-transparent text-[#F0EDE6]/80 hover:bg-white/10 hover:text-[#FBBF24]"
-                    }`}
-                >
-                  <span className={`text-xs font-mono font-bold w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 relative z-10 ${isCurrent ? "bg-[#FBBF24] text-[#0F1623]" : isCompleted ? "bg-emerald-500/20 text-emerald-400" : "bg-white/10 text-[#F0EDE6]/60"
-                    }`}>
-                    {isCompleted ? <Check className="w-3.5 h-3.5" /> : item.order_index ?? index + 1}
-                  </span>
-
-                  <span className="text-sm line-clamp-2 leading-snug relative z-10">
-                    {item.title}
-                  </span>
-
-                  {isCompleted && !isCurrent && (
-                    <div className="absolute top-0 right-0 w-1.5 h-full bg-emerald-500/40" />
-                  )}
-                </Link>
-              );
-            })}
-          </div>
+          {/* Back to Course button in Sidebar */}
+          <Link
+            href={`/courses/${rawId}`}
+            className="flex items-center justify-center w-full py-3 px-4 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 active:bg-white/15 transition-all text-[#F0EDE6] hover:text-[#FBBF24] text-center font-bold text-sm"
+          >
+            العودة لصفحة الكورس الرئيسية
+          </Link>
         </div>
 
-        {/* Back to Course button in Sidebar */}
-        <Link
-          href={`/courses/${rawId}`}
-          className="flex items-center justify-center w-full py-3 px-4 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 active:bg-white/15 transition-all text-[#F0EDE6] hover:text-[#FBBF24] text-center font-bold text-sm"
-        >
-          العودة لصفحة الكورس الرئيسية
-        </Link>
       </div>
-
     </div>
   );
 }

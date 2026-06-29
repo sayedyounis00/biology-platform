@@ -30,7 +30,13 @@ export default function ExamNote({ exam }: { exam?: any }) {
 
   const handleSend = async () => {
     setIsSent(true);
-    await submitExam(exam.id);
+    const userStr = localStorage.getItem("current_user");
+    if (userStr) {
+      try {
+        const user = JSON.parse(userStr);
+        await submitExam(exam.id, user.id);
+      } catch (e) {}
+    }
   };
 
   return (

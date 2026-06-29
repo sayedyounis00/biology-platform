@@ -3,49 +3,66 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
-import { createClient } from "@/lib/supabase/client";
-import { signOut } from "@/app/auth/actions";
-import { User } from "@supabase/supabase-js";
 import Image from "next/image";
 import logo from "@/assets/website-logo.png";
+import { useRouter } from "next/navigation";
+import { logoutUser } from "@/app/auth/actions";
+
 export default function Navbar() {
+  const router = useRouter();
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [user, setUser] = useState<User | null>(null);
+  const [profile, setProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 20);
     window.addEventListener("scroll", onScroll, { passive: true });
 
-    // Initialize Supabase Client
-    const supabase = createClient();
-
-    // Check current session
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      setUser(user);
-      setLoading(false);
-    });
-
-    // Listen to Auth Changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (_event, session) => {
-        setUser(session?.user ?? null);
-        setLoading(false);
+    // Check localStorage for manual session
+    const loadUserFromStorage = () => {
+      const userStr = localStorage.getItem("current_user");
+      if (userStr) {
+        try {
+          setProfile(JSON.parse(userStr));
+        } catch (e) {
+          localStorage.removeItem("current_user");
+          setProfile(null);
+        }
+      } else {
+        setProfile(null);
       }
-    );
+      setLoading(false);
+    };
+
+    loadUserFromStorage();
+    
+    // Listen for storage events (e.g. login from another tab, or login page push)
+    window.addEventListener("storage", loadUserFromStorage);
 
     return () => {
       window.removeEventListener("scroll", onScroll);
-      subscription.unsubscribe();
+      window.removeEventListener("storage", loadUserFromStorage);
     };
   }, []);
 
   const handleSignOut = async () => {
-    await signOut();
+    // 1. Clear local storage
+    localStorage.removeItem("current_user");
+    
+    // 2. Clear cookie
+    await logoutUser();
+    
+    // 3. Update state
+    setProfile(null);
+    
+    // 4. Fire storage event and redirect
+    window.dispatchEvent(new Event("storage"));
+    router.push("/");
+    router.refresh();
   };
 
-  const displayName = user?.user_metadata?.full_name || user?.email?.split("@")[0] || "";
+  const displayName = profile?.full_name || "طالب";
 
   return (
     <nav
@@ -58,11 +75,7 @@ export default function Navbar() {
       )}
     >
       <div className="mx-auto max-w-6xl px-6 flex items-center justify-between h-20">
-        {/* Logo */}
-        <Link
-          href="/"
-          className="flex items-center"
-        >
+        <Link href="/" className="flex items-center">
           <Image
             src={logo}
             alt="احمد سعد"
@@ -73,9 +86,8 @@ export default function Navbar() {
           />
         </Link>
 
-        {/* Desktop links */}
         <div className="hidden md:flex items-center gap-6">
-          {user ? (
+          {profile ? (
             <Link
               href="/profile"
               className="text-[#F0EDE6]/60 text-sm font-medium hover:text-[#F0EDE6] transition-colors"
@@ -84,12 +96,11 @@ export default function Navbar() {
             </Link>
           ) : (
             <div></div>
-
           )}
 
           {!loading && (
             <>
-              {user ? (
+              {profile ? (
                 <div className="flex items-center gap-4">
                   <span className="text-[#F0EDE6]/80 text-sm font-medium bg-[#1A2235] px-3.5 py-1.5 rounded-full border border-white/5">
                     مرحباً، {displayName}
@@ -107,7 +118,7 @@ export default function Navbar() {
                     href="/register"
                     className="text-[#FFFFF]/60 text-lg font-bold hover:text-[#F0EDE6] transition-colors"
                   >
-                    أنشي حساب
+                    أنشئ حساب
                   </Link>
                   <Link
                     href="/login"
@@ -122,37 +133,20 @@ export default function Navbar() {
           )}
         </div>
 
-        {/* Mobile hamburger */}
         <button
           id="mobile-menu-toggle"
           className="md:hidden flex flex-col gap-1.5 p-2"
           onClick={() => setMobileOpen((o) => !o)}
           aria-label="Toggle menu"
         >
-          <span
-            className={cn(
-              "block w-5 h-0.5 bg-[#F0EDE6] transition-all duration-300",
-              mobileOpen && "rotate-45 translate-y-[4px]"
-            )}
-          />
-          <span
-            className={cn(
-              "block w-5 h-0.5 bg-[#F0EDE6] transition-all duration-300",
-              mobileOpen && "-rotate-45 -translate-y-[4px]"
-            )}
-          />
+          <span className={cn("block w-5 h-0.5 bg-[#F0EDE6] transition-all duration-300", mobileOpen && "rotate-45 translate-y-[4px]")} />
+          <span className={cn("block w-5 h-0.5 bg-[#F0EDE6] transition-all duration-300", mobileOpen && "-rotate-45 -translate-y-[4px]")} />
         </button>
       </div>
 
-      {/* Mobile drawer */}
-      <div
-        className={cn(
-          "md:hidden overflow-hidden transition-all duration-300",
-          mobileOpen ? "max-h-64 border-b border-[#ffffff14]" : "max-h-0"
-        )}
-      >
+      <div className={cn("md:hidden overflow-hidden transition-all duration-300", mobileOpen ? "max-h-64 border-b border-[#ffffff14]" : "max-h-0")}>
         <div className="bg-[#0F1623]/95 backdrop-blur-md px-6 py-6 flex flex-col gap-4">
-          {user ? (
+          {profile ? (
             <Link
               href="/profile"
               className="text-[#F0EDE6]/60 text-sm font-medium hover:text-[#F0EDE6] transition-colors"
@@ -172,7 +166,7 @@ export default function Navbar() {
 
           {!loading && (
             <>
-              {user ? (
+              {profile ? (
                 <>
                   <span className="text-[#F0EDE6]/80 text-sm font-medium py-1">
                     مرحباً، {displayName}

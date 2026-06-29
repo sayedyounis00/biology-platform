@@ -4,6 +4,7 @@ import Navbar from "@/components/layout/Navbar";
 import LessonViewer from "@/components/courses/LessonViewer";
 import { createClient } from "@/lib/supabase/server";
 import type { Course, Lesson } from "@/types";
+import { cookies } from "next/headers";
 
 export default async function LessonDetailPage({
   params,
@@ -15,9 +16,10 @@ export default async function LessonDetailPage({
   const lessonId = rawLessonId.split("-").slice(0, 5).join("-");
 
   const supabaseClient = await createClient();
-  const { data: { user } } = await supabaseClient.auth.getUser();
+  const cookieStore = await cookies();
+  const userId = cookieStore.get("user_id")?.value;
 
-  if (!user) {
+  if (!userId) {
     redirect("/login");
   }
 
@@ -47,7 +49,7 @@ export default async function LessonDetailPage({
       supabaseClient
         .from("enrollments")
         .select("id")
-        .eq("user_id", user.id)
+        .eq("user_id", userId)
         .eq("course_id", id)
         .maybeSingle()
     ]);
@@ -85,7 +87,7 @@ export default async function LessonDetailPage({
       ? supabaseClient
           .from("lesson_progress")
           .select("lesson_id")
-          .eq("user_id", user.id)
+          .eq("user_id", userId)
           .in("lesson_id", allLessons.map((l) => l.id))
           .eq("completed", true)
       : Promise.resolve({ data: [], error: null });
@@ -129,7 +131,7 @@ export default async function LessonDetailPage({
             lesson={lesson}
             allLessons={allLessons}
             initialCompletedLessonIds={initialCompletedLessonIds}
-            userId={user.id}
+            userId={userId}
             rawId={rawId}
             encodedVideoUrl={encodedVideoUrl}
           />

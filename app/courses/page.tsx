@@ -3,6 +3,7 @@ import Navbar from "@/components/layout/Navbar";
 import CourseCard from "@/components/courses/CourseCard";
 import { supabase, createClient } from "@/lib/supabase/server";
 import type { Course } from "@/types";
+import { cookies } from "next/headers";
 
 const gradeLabels: Record<string, string> = {
   "1": "الصف الأول الثانوي",
@@ -17,8 +18,9 @@ export default async function CoursesPage({
 }) {
   const supabaseClient = await createClient();
 
-  const { data: { user } } = await supabaseClient.auth.getUser();
-  const isLoggedIn = !!user;
+  const cookieStore = await cookies();
+  const userId = cookieStore.get("user_id")?.value;
+  const isLoggedIn = !!userId;
 
   let allYears: any[] = [];
   let enrolledCourseIds: string[] = [];
@@ -26,11 +28,11 @@ export default async function CoursesPage({
 
   try {
     const yearsPromise = supabaseClient.from("years").select("id, title, order_index");
-    const enrollmentsPromise = user 
-      ? supabaseClient.from("enrollments").select("course_id").eq("user_id", user.id)
+    const enrollmentsPromise = userId 
+      ? supabaseClient.from("enrollments").select("course_id").eq("user_id", userId)
       : Promise.resolve({ data: null });
-    const profilePromise = user
-      ? supabaseClient.from("profiles").select("current_year_id").eq("id", user.id).maybeSingle()
+    const profilePromise = userId
+      ? supabaseClient.from("profiles").select("current_year_id").eq("id", userId).maybeSingle()
       : Promise.resolve({ data: null });
 
     const [yearsRes, enrollmentsRes, profileRes] = await Promise.all([

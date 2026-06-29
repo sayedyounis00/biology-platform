@@ -10,29 +10,27 @@ export interface ComplaintState {
 export async function submitComplaint(prevState: any, formData: FormData): Promise<ComplaintState> {
   const text = formData.get("complaintText") as string;
   const manualPhone = formData.get("phone") as string | null;
+  const userId = formData.get("userId") as string | null;
 
   if (!text || text.trim() === "") {
     return { error: "يرجى كتابة تفاصيل المشكلة" };
   }
 
+  if (!userId) {
+    return { error: "يجب تسجيل الدخول لإرسال شكوى" };
+  }
+
   try {
     const supabase = await createClient();
-
-    // Verify the user is authenticated
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-
-    if (authError || !user) {
-      return { error: "يجب تسجيل الدخول لإرسال شكوى" };
-    }
 
     // Fetch name & phone from the user's profile
     const { data: profile } = await supabase
       .from("profiles")
       .select("full_name, phone")
-      .eq("id", user.id)
+      .eq("id", userId)
       .maybeSingle();
 
-    const userName = profile?.full_name || user.user_metadata?.full_name || user.email?.split("@")[0] || "";
+    const userName = profile?.full_name || "غير محدد";
     
     // Use profile phone if available, otherwise use manually submitted phone
     let phoneNumber = profile?.phone || "";
@@ -44,7 +42,7 @@ export async function submitComplaint(prevState: any, formData: FormData): Promi
       await supabase
         .from("profiles")
         .update({ phone: phoneNumber, updated_at: new Date().toISOString() })
-        .eq("id", user.id);
+        .eq("id", userId);
     }
 
     if (!phoneNumber) {
@@ -58,7 +56,7 @@ export async function submitComplaint(prevState: any, formData: FormData): Promi
     // Insert complaint linked to the user
     const { error } = await supabase.from("complaints").insert({
       complaint_text: text.trim(),
-      user_id: user.id,
+      user_id: userId,
       user_name: userName,
       phone_number: phoneNumber,
     });

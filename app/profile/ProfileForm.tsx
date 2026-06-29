@@ -2,8 +2,9 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { updateProfile } from "@/app/auth/actions";
+import { updateProfileManual } from "@/app/auth/actions";
 import egyptData from "@/egypt_full.json";
+import { useRouter } from "next/navigation";
 
 export default function ProfileForm({
   user,
@@ -19,6 +20,8 @@ export default function ProfileForm({
   const [availableCenters, setAvailableCenters] = useState<any[]>([]);
   const [phone, setPhone] = useState(profile?.phone || "");
   const [parentPhone, setParentPhone] = useState(profile?.parent_phone_number || "");
+  const [isLoading, setIsLoading] = useState(false);
+  const router = useRouter();
 
   // Validate that parent phone is not the same as student phone
   useEffect(() => {
@@ -53,8 +56,53 @@ export default function ProfileForm({
     }
   }, [governorate]);
 
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setIsLoading(true);
+
+    const formData = new FormData(e.currentTarget);
+    const fullName = formData.get("fullName") as string;
+    
+    // Client-side validation for Arabic Tripartite name
+    const arabicRegex = /^[\u0621-\u064A\s]+$/;
+    if (!arabicRegex.test(fullName.trim())) {
+      setIsLoading(false);
+      return router.push(`/profile?error=${encodeURIComponent("يجب إدخال الاسم باللغة العربية فقط")}`);
+    }
+    const nameParts = fullName.trim().split(/\s+/);
+    if (nameParts.length < 3) {
+      setIsLoading(false);
+      return router.push(`/profile?error=${encodeURIComponent("يجب إدخال الاسم الثلاثي (3 مقاطع على الأقل)")}`);
+    }
+
+    const data = {
+      fullName,
+      phone: formData.get("phone") as string,
+      parentPhone: formData.get("parentPhone") as string,
+      governorate: formData.get("governorate") as string,
+      center: formData.get("center") as string,
+      currentYearId: formData.get("currentYearId") as string,
+    };
+
+    try {
+      const res = await updateProfileManual(user?.id, data);
+      if (res.error) {
+        router.push(`/profile?error=${encodeURIComponent(res.error)}`);
+      } else if (res.profile) {
+        // Update local storage
+        localStorage.setItem("current_user", JSON.stringify(res.profile));
+        window.dispatchEvent(new Event("storage"));
+        router.push(`/profile?success=true`);
+      }
+    } catch (err: any) {
+      router.push(`/profile?error=${encodeURIComponent("حدث خطأ أثناء التحديث")}`);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
-    <form action={updateProfile} className="space-y-6">
+    <form onSubmit={handleSubmit} className="space-y-6">
       {/* Row 1: Name */}
       <div>
         <label
@@ -77,24 +125,7 @@ export default function ProfileForm({
         />
       </div>
 
-      {/* Row 2: Email (Disabled) */}
-      <div>
-        <label
-          htmlFor="email"
-          className="block text-sm font-medium text-[#F0EDE6]/40 mb-2 text-right"
-        >
-          البريد الإلكتروني (لا يمكن تعديله)
-        </label>
-        <input
-          id="email"
-          name="email"
-          type="email"
-          disabled
-          value={user?.email || ""}
-          className="w-full px-4 py-3 rounded-xl bg-[#0f1623]/50 border border-white/5 text-[#F0EDE6]/40 text-sm cursor-not-allowed text-right"
-          dir="ltr"
-        />
-      </div>
+
 
       {/* Grid: Phone & Parent Phone */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -280,9 +311,10 @@ export default function ProfileForm({
 
         <button
           type="submit"
-          className="px-8 py-3 rounded-xl bg-gradient-to-l from-amber-500 to-amber-600 text-[#0F1623] font-bold text-sm hover:from-amber-400 hover:to-amber-500 transition-all duration-300 shadow-lg shadow-amber-500/20 cursor-pointer"
+          disabled={isLoading}
+          className="px-8 py-3 rounded-xl bg-gradient-to-l from-amber-500 to-amber-600 text-[#0F1623] font-bold text-sm hover:from-amber-400 hover:to-amber-500 transition-all duration-300 shadow-lg shadow-amber-500/20 cursor-pointer disabled:opacity-50"
         >
-          حفظ التغييرات
+          {isLoading ? "جاري الحفظ..." : "حفظ التغييرات"}
         </button>
       </div>
     </form>

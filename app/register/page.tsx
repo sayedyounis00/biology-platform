@@ -1,99 +1,145 @@
 "use client";
 
-import { useState, Suspense } from "react";
+import { useState, Suspense, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { useSearchParams } from "next/navigation";
-import { getGoogleOAuthUrl } from "@/app/auth/actions";
-
-function GoogleIcon() {
-  return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-      <path
-        d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z"
-        fill="#4285F4"
-      />
-      <path
-        d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-        fill="#34A853"
-      />
-      <path
-        d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
-        fill="#FBBC05"
-      />
-      <path
-        d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
-        fill="#EA4335"
-      />
-    </svg>
-  );
-}
+import { useRouter } from "next/navigation";
+import { registerUser } from "@/app/auth/actions";
+import { createClient } from "@/lib/supabase/client";
+import egyptData from "@/egypt_full.json";
 
 function CheckIcon() {
   return (
-    <svg
-      width="48"
-      height="48"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="#34D399"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
+    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#34D399" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
       <polyline points="22 4 12 14.01 9 11.01" />
     </svg>
   );
 }
 
-function RegisterContent() {
-  const searchParams = useSearchParams();
-  const error = searchParams.get("error");
-  const success = searchParams.get("success");
-  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
+function EyeIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+    </svg>
+  );
+}
 
-  const handleGoogleSignUp = async () => {
-    setIsGoogleLoading(true);
+function EyeOffIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+    </svg>
+  );
+}
+
+function RegisterContent() {
+  const router = useRouter();
+  const [formData, setFormData] = useState({
+    full_name: "",
+    phone: "",
+    password: "",
+    password_confirmation: "",
+    governorate_name: "",
+    center_name: "",
+    parent_phone_number: "",
+    current_year_id: ""
+  });
+  const [availableCenters, setAvailableCenters] = useState<any[]>([]);
+  const [years, setYears] = useState<any[]>([]);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showPasswordConfirmation, setShowPasswordConfirmation] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [success, setSuccess] = useState(false);
+
+  useEffect(() => {
+    const fetchYears = async () => {
+      const supabase = createClient();
+      try {
+        const { data } = await supabase
+          .from("years")
+          .select("id, title")
+          .order("order_index", { ascending: true });
+        if (data) {
+          setYears(data);
+        }
+      } catch (err) {
+        console.error("Error fetching years", err);
+      }
+    };
+    fetchYears();
+  }, []);
+
+  const handleGovernorateChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const gov = e.target.value;
+    setFormData({ ...formData, governorate_name: gov, center_name: "" });
+    const selectedGov = egyptData.governorates.find((g: any) => g.name_ar === gov);
+    setAvailableCenters(selectedGov ? selectedGov.centers : []);
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+
+    // Client-side validation
+    // Client-side validation
+    const arabicRegex = /^[\u0621-\u064A\s]+$/;
+    if (!arabicRegex.test(formData.full_name.trim())) {
+      return setError("يجب إدخال الاسم باللغة العربية فقط");
+    }
+    const nameParts = formData.full_name.trim().split(/\s+/);
+    if (nameParts.length < 3) {
+      return setError("يجب إدخال الاسم الثلاثي (3 مقاطع على الأقل)");
+    }
+    if (formData.password.length < 8) {
+      return setError("كلمة المرور يجب أن تكون 8 أحرف على الأقل");
+    }
+    if (formData.password !== formData.password_confirmation) {
+      return setError("كلمات المرور غير متطابقة");
+    }
+    const phoneRegex = /^01[0125][0-9]{8}$/;
+    if (!phoneRegex.test(formData.phone)) {
+      return setError("رقم الهاتف غير صحيح (يجب أن يكون 11 رقماً ويبدأ بـ 01)");
+    }
+    if (!phoneRegex.test(formData.parent_phone_number)) {
+      return setError("رقم هاتف ولي الأمر غير صحيح");
+    }
+    if (formData.phone === formData.parent_phone_number) {
+      return setError("رقم الهاتف لا يمكن أن يكون نفس رقم ولي الأمر");
+    }
+
+    setIsLoading(true);
     try {
-      const res = await getGoogleOAuthUrl();
+      const res = await registerUser(formData);
       if (res.error) {
-        window.location.search = `?error=${encodeURIComponent(res.error)}`;
-      } else if (res.url) {
-        window.location.href = res.url;
+        setError(res.error);
+      } else if (res.success) {
+        setSuccess(true);
+        setTimeout(() => {
+          router.push("/dashboard");
+        }, 2000);
       }
     } catch (e: any) {
-      window.location.search = `?error=${encodeURIComponent(e.message || "حدث خطأ أثناء الاتصال")}`;
+      setError("حدث خطأ أثناء الاتصال");
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  // Success state
-  if (success === "true") {
+  if (success) {
     return (
       <div className="min-h-screen flex items-center justify-center px-4 py-12 relative overflow-hidden">
         <div className="absolute inset-0 pointer-events-none">
           <div className="absolute top-1/4 right-1/4 w-96 h-96 bg-emerald-400/5 rounded-full blur-3xl" />
           <div className="absolute bottom-1/4 left-1/4 w-80 h-80 bg-emerald-400/3 rounded-full blur-3xl" />
         </div>
-
         <div className="w-full max-w-md relative z-10 text-center">
           <div className="bg-[#1A2235] rounded-2xl border border-white/10 p-10 shadow-2xl shadow-black/20">
-            <div className="flex justify-center mb-4">
-              <CheckIcon />
-            </div>
-            <h2 className="text-2xl font-bold text-[#F0EDE6] mb-3">
-              تم إنشاء الحساب بنجاح!
-            </h2>
-            <p className="text-[#F0EDE6]/60 text-sm mb-6 leading-relaxed">
-              تم إرسال رسالة تأكيد إلى بريدك الإلكتروني. يرجى التحقق من بريدك
-              لتفعيل الحساب.
-            </p>
-            <Link
-              href="/login"
-              className="inline-block px-8 py-3 rounded-xl bg-gradient-to-l from-amber-500 to-amber-600 text-[#0F1623] font-bold text-sm hover:from-amber-400 hover:to-amber-500 transition-all duration-300 shadow-lg shadow-amber-500/20"
-            >
-              تسجيل الدخول
-            </Link>
+            <div className="flex justify-center mb-4"><CheckIcon /></div>
+            <h2 className="text-2xl font-bold text-[#F0EDE6] mb-3">تم إنشاء الحساب بنجاح!</h2>
+            <p className="text-[#F0EDE6]/60 text-sm mb-6 leading-relaxed">جاري تسجيل الدخول وتحويلك لحسابك...</p>
           </div>
         </div>
       </div>
@@ -102,70 +148,117 @@ function RegisterContent() {
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4 md:p-8 relative overflow-hidden">
-      {/* Background decoration */}
       <div className="absolute inset-0 pointer-events-none">
         <div className="absolute top-1/4 right-1/4 w-96 h-96 bg-amber-400/5 rounded-full blur-3xl" />
         <div className="absolute bottom-1/4 left-1/4 w-80 h-80 bg-amber-400/3 rounded-full blur-3xl" />
       </div>
 
       <div className="w-full max-w-5xl relative z-10 flex flex-col md:flex-row bg-[#0F1623]/80 rounded-3xl border border-[#ffffff14] shadow-2xl overflow-hidden min-h-[600px]">
-
-        {/* Form Section */}
         <div className="w-full md:w-1/2 p-8 md:p-12 lg:p-16 flex flex-col justify-center">
-          {/* Logo / Header */}
           <div className="text-center mb-8">
             <Link href="/" className="inline-block mb-4">
-              <span className="font-gravity font-bold text-3xl">م/احمد سعد</span>
+              <Image 
+                src="/website-logo.png" 
+                alt="م/احمد سعد" 
+                width={120} 
+                height={120} 
+                priority 
+                className="object-contain mx-auto"
+              />
             </Link>
-            <h1 className="text-2xl font-bold text-[#F0EDE6] mb-2">
-              إنشاء حساب جديد
-            </h1>
-            <p className="text-[#F0EDE6]/60 text-sm">
-              انضم إلينا وابدأ رحلة التعلّم
-            </p>
+            <h1 className="text-2xl font-bold text-[#F0EDE6] mb-2">إنشاء حساب جديد</h1>
           </div>
 
-          {/* Error message */}
           {error && (
             <div className="mb-6 p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm text-center">
-              {decodeURIComponent(error)}
+              {error}
             </div>
           )}
 
-          {/* Google Sign Up */}
-          <button
-            type="button"
-            disabled={isGoogleLoading}
-            onClick={handleGoogleSignUp}
-            className="w-full flex items-center justify-center gap-3 px-4 py-4 rounded-xl bg-white/5 border border-white/10 text-[#F0EDE6] font-bold text-sm hover:bg-white/10 hover:border-white/20 transition-all duration-300 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed mb-6"
-          >
-            <GoogleIcon />
-            {isGoogleLoading
-              ? "جاري التحويل..."
-              : "التسجيل بحساب جوجل"}
-          </button>
+          <form onSubmit={handleSubmit} className="space-y-4" dir="rtl">
+            <div>
+              <label className="block text-sm font-medium text-[#F0EDE6]/70 mb-1">الاسم الثلاثي</label>
+              <input type="text" required value={formData.full_name} onChange={e => setFormData({ ...formData, full_name: e.target.value })} className="w-full px-4 py-2 rounded-xl bg-[#0F1623] border border-white/10 text-white" />
+            </div>
 
-          {/* Login link */}
-          <p className="text-center text-sm text-[#F0EDE6]/60">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-[#F0EDE6]/70 mb-1">رقم هاتف الطالب</label>
+                <input type="tel" required value={formData.phone} onChange={e => setFormData({ ...formData, phone: e.target.value })} dir="ltr" placeholder="01xxxxxxxxx" className="w-full px-4 py-2 rounded-xl bg-[#0F1623] border border-white/10 text-white text-right" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-[#F0EDE6]/70 mb-1">رقم ولي الأمر  </label>
+                <input type="tel" required value={formData.parent_phone_number} onChange={e => setFormData({ ...formData, parent_phone_number: e.target.value })} dir="ltr" placeholder="01xxxxxxxxx" className="w-full px-4 py-2 rounded-xl bg-[#0F1623] border border-white/10 text-white text-right" />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-[#F0EDE6]/70 mb-1">كلمة المرور</label>
+                <div className="relative">
+                  <input type={showPassword ? "text" : "password"} required value={formData.password} onChange={e => setFormData({ ...formData, password: e.target.value })} dir="ltr" className="w-full pl-4 pr-10 py-2 rounded-xl bg-[#0F1623] border border-white/10 text-white focus:outline-none focus:ring-2 focus:ring-amber-400/50" />
+                  <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute inset-y-0 right-0 pr-3 flex items-center text-[#F0EDE6]/50 hover:text-[#F0EDE6] transition-colors focus:outline-none">
+                    {showPassword ? <EyeOffIcon className="w-5 h-5" /> : <EyeIcon className="w-5 h-5" />}
+                  </button>
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-[#F0EDE6]/70 mb-1">تأكيد كلمة المرور</label>
+                <div className="relative">
+                  <input type={showPasswordConfirmation ? "text" : "password"} required value={formData.password_confirmation} onChange={e => setFormData({ ...formData, password_confirmation: e.target.value })} dir="ltr" className="w-full pl-4 pr-10 py-2 rounded-xl bg-[#0F1623] border border-white/10 text-white focus:outline-none focus:ring-2 focus:ring-amber-400/50" />
+                  <button type="button" onClick={() => setShowPasswordConfirmation(!showPasswordConfirmation)} className="absolute inset-y-0 right-0 pr-3 flex items-center text-[#F0EDE6]/50 hover:text-[#F0EDE6] transition-colors focus:outline-none">
+                    {showPasswordConfirmation ? <EyeOffIcon className="w-5 h-5" /> : <EyeIcon className="w-5 h-5" />}
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-[#F0EDE6]/70 mb-1">المحافظة</label>
+                <select required value={formData.governorate_name} onChange={handleGovernorateChange} className="w-full px-4 py-2 rounded-xl bg-[#0F1623] border border-white/10 text-white">
+                  <option value="">اختر</option>
+                  {egyptData.governorates.map((gov: any) => (
+                    <option key={gov.id} value={gov.name_ar}>{gov.name_ar}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-[#F0EDE6]/70 mb-1">المركز</label>
+                <select required disabled={!formData.governorate_name} value={formData.center_name} onChange={e => setFormData({ ...formData, center_name: e.target.value })} className="w-full px-4 py-2 rounded-xl bg-[#0F1623] border border-white/10 text-white">
+                  <option value="">اختر</option>
+                  {availableCenters.map((c: any) => (
+                    <option key={c.id} value={c.name_ar}>{c.name_ar}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-[#F0EDE6]/70 mb-1">السنة الدراسية (الصف)</label>
+              <select required value={formData.current_year_id} onChange={e => setFormData({ ...formData, current_year_id: e.target.value })} className="w-full px-4 py-2 rounded-xl bg-[#0F1623] border border-white/10 text-white">
+                <option value="">اختر السنة الدراسية</option>
+                {years.map((year: any) => (
+                  <option key={year.id} value={year.id}>{year.title}</option>
+                ))}
+              </select>
+            </div>
+
+            <button type="submit" disabled={isLoading} className="w-full mt-6 px-4 py-3 rounded-xl bg-amber-500 text-[#0F1623] font-bold text-sm hover:bg-amber-400 transition-all">
+              {isLoading ? "جاري الإنشاء..." : "إنشاء حساب"}
+            </button>
+          </form>
+
+          <p className="text-center text-sm text-[#F0EDE6]/60 mt-4">
             لديك حساب بالفعل؟{" "}
-            <Link
-              href="/login"
-              className="text-amber-400 hover:text-amber-300 font-bold transition-colors"
-            >
+            <Link href="/login" className="text-amber-400 hover:text-amber-300 font-bold transition-colors">
               تسجيل الدخول
             </Link>
           </p>
         </div>
 
-        {/* Image Section */}
         <div className="hidden md:block w-full md:w-1/2 relative bg-[#1A2235]">
-          <Image
-            src="/login-image-3.jpeg"
-            alt="إنشاء حساب جديد"
-            fill
-            className="object-cover"
-            priority
-          />
+          <Image src="/login-image-3.jpeg" alt="إنشاء حساب جديد" fill className="object-cover" priority />
         </div>
       </div>
     </div>

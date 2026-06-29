@@ -4,6 +4,7 @@ import Navbar from "@/components/layout/Navbar";
 import LessonCard from "@/components/courses/LessonCard";
 import { supabase, createClient } from "@/lib/supabase/server";
 import type { Course, Lesson } from "@/types";
+import { cookies } from "next/headers";
 
 export default async function CourseLessonsPage({
   params,
@@ -33,7 +34,8 @@ export default async function CourseLessonsPage({
   }
 
   const supabaseClient = await createClient();
-  const { data: { user } } = await supabaseClient.auth.getUser();
+  const cookieStore = await cookies();
+  const userId = cookieStore.get("user_id")?.value;
 
   // Fetch course details, lessons, and enrollment in parallel
   let course: Course;
@@ -54,11 +56,11 @@ export default async function CourseLessonsPage({
       .eq("course_id", id)
       .order("created_at", { ascending: false });
 
-    const enrollmentPromise = user
+    const enrollmentPromise = userId
       ? supabaseClient
         .from("enrollments")
         .select("id")
-        .eq("user_id", user.id)
+        .eq("user_id", userId)
         .eq("course_id", id)
         .maybeSingle()
       : Promise.resolve({ data: null, error: null });
@@ -89,7 +91,7 @@ export default async function CourseLessonsPage({
 
   // If the course is paid, protect access via enrollment check
   if (course.price && course.price > 0) {
-    if (!user) {
+    if (!userId) {
       redirect("/register");
     }
 

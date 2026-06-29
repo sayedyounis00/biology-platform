@@ -57,8 +57,9 @@ export default function SupportFAB() {
 
     const fetchUserProfile = async () => {
       try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user) {
+        const userStr = localStorage.getItem("current_user");
+        if (userStr) {
+          const user = JSON.parse(userStr);
           setIsLoggedIn(true);
 
           const { data: profile } = await supabase
@@ -71,7 +72,7 @@ export default function SupportFAB() {
             setName(profile.full_name || user.user_metadata?.full_name || "");
             setPhone(profile.phone || "");
           } else {
-            setName(user.user_metadata?.full_name || user.email?.split("@")[0] || "");
+            setName(user.full_name || "");
           }
         } else {
           setIsLoggedIn(false);
@@ -85,20 +86,10 @@ export default function SupportFAB() {
 
     fetchUserProfile();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
-        if (session?.user) {
-          fetchUserProfile();
-        } else {
-          setIsLoggedIn(false);
-          setName("");
-          setPhone("");
-        }
-      }
-    );
+    window.addEventListener("storage", fetchUserProfile);
 
     return () => {
-      subscription.unsubscribe();
+      window.removeEventListener("storage", fetchUserProfile);
     };
   }, []);
 
@@ -112,6 +103,15 @@ export default function SupportFAB() {
     formData.append("complaintText", complaintText);
     if (!phone && manualPhone.trim()) {
       formData.append("phone", manualPhone.trim());
+    }
+    
+    // Add userId to formData
+    const userStr = localStorage.getItem("current_user");
+    if (userStr) {
+      try {
+        const user = JSON.parse(userStr);
+        formData.append("userId", user.id);
+      } catch (e) {}
     }
 
     const result = await submitComplaint(null, formData);

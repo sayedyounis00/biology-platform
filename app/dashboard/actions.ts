@@ -3,11 +3,10 @@
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 
-export async function submitExam(examId: string) {
+export async function submitExam(examId: string, userId: string) {
   const supabase = await createClient();
   
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) {
+  if (!userId) {
     return { error: "User not authenticated" };
   }
 
@@ -15,7 +14,7 @@ export async function submitExam(examId: string) {
     .from("exam_submissions")
     .insert({
       exam_id: examId,
-      user_id: user.id
+      user_id: userId
     });
 
   if (error) {

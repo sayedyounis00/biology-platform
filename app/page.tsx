@@ -5,6 +5,7 @@ import ScrollVideoHero from "@/components/home/ScrollVideoHero";
 import ParallaxSection from "@/components/home/ParallaxSection";
 import { supabase, createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
+import { cookies } from "next/headers";
 
 async function getData(): Promise<{ courseCount: number }> {
   if (!supabase) {
@@ -27,17 +28,10 @@ async function getData(): Promise<{ courseCount: number }> {
 }
 
 export default async function Home() {
-  const supabaseClient = await createClient();
+  const cookieStore = await cookies();
+  const userId = cookieStore.get("user_id")?.value;
 
-  let user = null;
-  try {
-    const { data } = await supabaseClient.auth.getUser();
-    user = data?.user || null;
-  } catch (error) {
-    console.error("Error fetching user session on homepage:", error);
-  }
-
-  if (user) {
+  if (userId) {
     redirect("/dashboard");
   }
 
