@@ -121,6 +121,9 @@ export async function updateProfile(formData: FormData) {
 
   const fullName = formData.get("fullName") as string;
   const phone = formData.get("phone") as string;
+  const parentPhone = formData.get("parentPhone") as string;
+  const governorate = formData.get("governorate") as string;
+  const center = formData.get("center") as string;
   const studentId = formData.get("studentId") as string;
   const currentYearId = formData.get("currentYearId") as string;
 
@@ -139,6 +142,9 @@ export async function updateProfile(formData: FormData) {
       .update({
         full_name: fullName,
         phone: phone || null,
+        parent_phone_number: parentPhone || null,
+        governorate_name: governorate || null,
+        center_name: center || null,
         current_year_id: yearId,
         updated_at: new Date().toISOString(),
       })
@@ -152,6 +158,9 @@ export async function updateProfile(formData: FormData) {
         email: user.email,
         full_name: fullName,
         phone: phone || null,
+        parent_phone_number: parentPhone || null,
+        governorate_name: governorate || null,
+        center_name: center || null,
         current_year_id: yearId,
         updated_at: new Date().toISOString(),
       });
