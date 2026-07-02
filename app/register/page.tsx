@@ -148,21 +148,21 @@ function RegisterContent() {
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4 md:p-8 relative overflow-hidden">
-      <div className="absolute inset-0 pointer-events-none">
+      <div className="absolute inset-0 pointer-events-none z-0">
         <div className="absolute top-1/4 right-1/4 w-96 h-96 bg-amber-400/5 rounded-full blur-3xl" />
         <div className="absolute bottom-1/4 left-1/4 w-80 h-80 bg-amber-400/3 rounded-full blur-3xl" />
       </div>
 
-      <div className="w-full max-w-5xl relative z-10 flex flex-col md:flex-row bg-[#0F1623]/80 rounded-3xl border border-[#ffffff14] shadow-2xl overflow-hidden min-h-[600px]">
+      <div className="w-full max-w-6xl relative z-10 flex flex-col md:flex-row bg-[#0F1623]/80 rounded-3xl border border-[#ffffff14] shadow-2xl overflow-hidden min-h-[700px]">
         <div className="w-full md:w-1/2 p-8 md:p-12 lg:p-16 flex flex-col justify-center">
           <div className="text-center mb-8">
             <Link href="/" className="inline-block mb-4">
-              <Image 
-                src="/website-logo.png" 
-                alt="م/احمد سعد" 
-                width={120} 
-                height={120} 
-                priority 
+              <Image
+                src="/website-logo.png"
+                alt="م/احمد سعد"
+                width={120}
+                height={120}
+                priority
                 className="object-contain mx-auto"
               />
             </Link>
@@ -257,8 +257,8 @@ function RegisterContent() {
           </p>
         </div>
 
-        <div className="hidden md:block w-full md:w-1/2 relative bg-[#1A2235]">
-          <Image src="/login-image-3.jpeg" alt="إنشاء حساب جديد" fill className="object-cover" priority />
+        <div className="hidden md:block w-full md:w-1/2 relative bg-[#0f1623] rounded-r-3xl">
+          <Image src="/mr-login-image.png" alt="إنشاء حساب جديد" fill className="object-contain object-center p-8" sizes="50vw" priority />
         </div>
       </div>
     </div>

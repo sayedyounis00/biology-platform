@@ -133,10 +133,10 @@ export default function DashboardPage() {
 
           <div className="bg-[#1A2235]/90 rounded-2xl border border-white/10 p-8 shadow-2xl shadow-black/25 backdrop-blur-md">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
-              <h2 className="text-2xl font-bold text-[#F0EDE6] order-1 sm:order-2">
+              <h2 className="text-2xl font-bold text-[#F0EDE6]">
                 كورساتي المشترك بها
               </h2>
-              <div className="flex flex-wrap items-center gap-3 order-2 sm:order-1">
+              <div className="flex flex-wrap items-center gap-3">
                 <span className="px-4 py-1.5 rounded-full text-sm font-semibold bg-[#FBBF24]/10 text-[#FBBF24]">
                   {subscribedCourses.length} {subscribedCourses.length === 1 ? "كورس" : "كورسات"}
                 </span>
