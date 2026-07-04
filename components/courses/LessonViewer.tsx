@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
-import { Circle, Check, Play, Pause, Volume2, VolumeX, RotateCcw, RotateCw, Maximize, Minimize, Settings, FileText, Download, ChevronDown } from "lucide-react";
+import { Circle, Check, Play, Pause, Volume2, VolumeX, RotateCcw, RotateCw, Maximize, Minimize, Settings, FileText, Download, ChevronDown, Subtitles } from "lucide-react";
 import { toggleLessonCompleteAction, markLessonCompleteAction } from "@/app/courses/actions";
 import type { Course, Lesson } from "@/types";
 
@@ -148,6 +148,7 @@ export default function LessonViewer({
   const [playbackSpeed, setPlaybackSpeed] = useState(1);
   const [videoQuality, setVideoQuality] = useState<"480" | "720">("720");
   const [showQualityMenu, setShowQualityMenu] = useState(false);
+  const [showCaptions, setShowCaptions] = useState(false);
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const videoContainerRef = useRef<HTMLDivElement>(null);
@@ -731,6 +732,31 @@ export default function LessonViewer({
     // TODO: Implement actual quality switching when backend supports multiple quality URLs
   };
 
+  const handleCCToggle = () => {
+    const nextCC = !showCaptions;
+    setShowCaptions(nextCC);
+    
+    if (isDirectVideo && videoRef.current) {
+      const tracks = videoRef.current.textTracks;
+      if (tracks) {
+        for (let i = 0; i < tracks.length; i++) {
+          tracks[i].mode = nextCC ? "showing" : "hidden";
+        }
+      }
+    } else if (youtubeUrl && ytPlayerReady && ytPlayerRef.current) {
+      if (nextCC) {
+        try {
+          ytPlayerRef.current.loadModule("captions");
+          ytPlayerRef.current.setOption("captions", "track", {});
+        } catch (e) {}
+      } else {
+        try {
+          ytPlayerRef.current.unloadModule("captions");
+        } catch (e) {}
+      }
+    }
+  };
+
   // Map actual attachment URLs to displayable items
   const attachments = (lesson.attachment_urls || []).map((url, index) => {
     let filename = "مرفق";
@@ -777,8 +803,8 @@ export default function LessonViewer({
         <div className="lg:col-span-2 flex flex-col gap-6">
 
           {/* Custom Interactive Video Player Box */}
-          <div className="flex flex-col gap-3">
-            <div ref={videoContainerRef} className="relative w-full aspect-video rounded-2xl overflow-hidden border border-white/10 bg-[#1A2235] shadow-2xl">
+          <div ref={videoContainerRef} className={`relative flex flex-col w-full ${isFullscreen ? "h-screen bg-black justify-center" : "gap-3"}`}>
+            <div className={`relative w-full overflow-hidden bg-[#1A2235] ${isFullscreen ? "h-full" : "aspect-video rounded-2xl border border-white/10 shadow-2xl"}`}>
 
               {/* The transparent click blocker overlay */}
               <div className="absolute inset-0 bg-transparent z-20 pointer-events-auto cursor-default" />
@@ -818,7 +844,7 @@ export default function LessonViewer({
                   onPause={() => setIsPlaying(false)}
                   onTimeUpdate={handleTimeUpdate}
                   onDurationChange={handleDurationChange}
-                  className="absolute inset-0 w-full h-full object-cover pointer-events-none"
+                  className={`absolute inset-0 w-full h-full pointer-events-none ${isFullscreen ? "object-contain bg-black" : "object-cover"}`}
                 />
               ) : (
                 <div className="absolute inset-0 flex flex-col items-center justify-center text-[#F0EDE6]/40 p-6 text-center gap-3">
@@ -831,7 +857,10 @@ export default function LessonViewer({
             </div>
 
             {/* Unified Custom Controller Bar */}
-            <div className="rounded-2xl bg-[#1A2235] border border-white/10 p-4 shadow-xl flex flex-col gap-3" dir="rtl">
+            <div 
+              className={`flex flex-col gap-3 ${isFullscreen ? "absolute bottom-0 left-0 right-0 z-50 p-6 bg-gradient-to-t from-black/90 via-black/60 to-transparent border-none" : "rounded-2xl bg-[#1A2235] border border-white/10 p-4 shadow-xl"}`} 
+              dir="rtl"
+            >
 
               {/* Timeline seek bar */}
               <div className="flex items-center gap-3 flex-row">
@@ -935,6 +964,17 @@ export default function LessonViewer({
                       </div>
                     )}
                   </div>
+
+                  <button
+                    onClick={handleCCToggle}
+                    title={showCaptions ? "إخفاء الترجمة" : "إظهار الترجمة"}
+                    className={`p-2 rounded-lg transition-all cursor-pointer ${showCaptions
+                      ? "bg-[#FBBF24]/10 border border-[#FBBF24]/20 text-[#FBBF24]"
+                      : "bg-white/5 hover:bg-white/10 text-[#F0EDE6]"
+                      }`}
+                  >
+                    <Subtitles className="w-4 h-4" />
+                  </button>
 
                   <button
                     onClick={handleMuteToggle}
