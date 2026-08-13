@@ -15,9 +15,10 @@ export default function CourseCard({ course, isLoggedIn, isEnrolled }: CourseCar
   const hasAccess = isFree || isEnrolled;
 
   return (
-    <div
+    <Link
+      href={`/courses/${course.id}-${slugify(course.title)}`}
       id={`course-card-${course.id}`}
-      className="group flex flex-col rounded-2xl bg-[#1A2235] border border-[#ffffff14] overflow-hidden transition-all duration-300 hover:border-[#FBBF24]/30 hover:shadow-[0_0_30px_rgba(251,191,36,0.06)]"
+      className="group flex flex-col rounded-2xl bg-[#1A2235] border border-[#ffffff14] overflow-hidden transition-all duration-300 hover:border-[#FBBF24]/30 hover:shadow-[0_0_30px_rgba(251,191,36,0.06)] cursor-pointer"
     >
       {/* Thumbnail */}
       <div className="aspect-video relative overflow-hidden bg-[#0F1623]">
@@ -64,21 +65,20 @@ export default function CourseCard({ course, isLoggedIn, isEnrolled }: CourseCar
           </div>
         </div>
 
-        {/* Enroll Button */}
+        {/* Browse Button */}
         <div className="pt-2">
-          <Link
-            href={isLoggedIn ? `/courses/${course.id}-${slugify(course.title)}` : "/register"}
+          <span
             className={`flex items-center justify-center w-full px-4 py-2.5 rounded-xl font-bold text-sm transition-all duration-300 text-center ${
               hasAccess
-                ? "bg-emerald-500 hover:bg-emerald-600 text-white hover:shadow-[0_0_20px_rgba(16,185,129,0.2)]"
-                : "bg-[#FBBF24] hover:bg-[#FBBF24]/90 text-[#0F1623] hover:shadow-[0_0_20px_rgba(251,191,36,0.15)]"
+                ? "bg-emerald-500 group-hover:bg-emerald-600 text-white group-hover:shadow-[0_0_20px_rgba(16,185,129,0.2)]"
+                : "bg-[#FBBF24] group-hover:bg-[#FBBF24]/90 text-[#0F1623] group-hover:shadow-[0_0_20px_rgba(251,191,36,0.15)]"
             }`}
           >
-            {hasAccess ? "شاهد الآن" : "اشترك الآن"}
-          </Link>
+            {hasAccess ? "شاهد الآن" : "تصفح الحصص"}
+          </span>
         </div>
       </div>
-    </div>
+    </Link>
   );
 }
 

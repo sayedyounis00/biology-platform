@@ -1,114 +1,113 @@
-"use client";
-
-import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { useRouter } from "next/navigation";
+import { redirect } from "next/navigation";
+import { cookies } from "next/headers";
 import Navbar from "@/components/layout/Navbar";
 import ExamNote from "@/components/dashboard/ExamNote";
-import { createClient } from "@/lib/supabase/client";
+import { createClient } from "@/lib/supabase/server";
 import { slugify } from "@/lib/utils";
 
-export default function DashboardPage() {
-  const router = useRouter();
-  const [profile, setProfile] = useState<any>(null);
-  const [subscribedCourses, setSubscribedCourses] = useState<any[]>([]);
-  const [exams, setExams] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+export default async function DashboardPage() {
+  const cookieStore = await cookies();
+  const userId = cookieStore.get("user_id")?.value;
 
-  useEffect(() => {
-    const userStr = localStorage.getItem("current_user");
-    if (!userStr) {
-      router.push("/login");
-      return;
-    }
-    
-    let user;
-    try {
-      user = JSON.parse(userStr);
-    } catch {
-      router.push("/login");
-      return;
-    }
+  if (!userId) {
+    redirect("/login");
+  }
 
-    setProfile(user);
-    
-    const fetchDashboardData = async () => {
-      const supabase = createClient();
-      
-      try {
-        // Fetch up-to-date profile just in case
-        const { data: dbProfile } = await supabase
-          .from("profiles")
+  const supabase = await createClient();
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("*")
+    .eq("id", userId)
+    .single();
+
+  if (!profile) {
+    redirect("/login");
+  }
+
+  // Fetch enrollments, lesson accesses, exams, and submissions in parallel
+  const [enrollmentsResult, lessonAccessResult, examsResult, submissionsResult] = await Promise.all([
+    supabase
+      .from("enrollments")
+      .select(`
+        course_id,
+        enrolled_at,
+        courses (
+          id,
+          title,
+          description,
+          thumbnail_url,
+          price,
+          is_published
+        )
+      `)
+      .eq("user_id", userId)
+      .order("enrolled_at", { ascending: false }),
+    supabase
+      .from("lesson_access")
+      .select(`
+        course_id,
+        lesson_id,
+        granted_at,
+        courses (
+          id,
+          title,
+          description,
+          thumbnail_url,
+          price,
+          is_published
+        )
+      `)
+      .eq("user_id", userId)
+      .order("granted_at", { ascending: false }),
+    profile.current_year_id 
+      ? supabase
+          .from("exams")
           .select("*")
-          .eq("id", user.id)
-          .single();
-          
-        if (dbProfile) {
-          setProfile(dbProfile);
-          localStorage.setItem("current_user", JSON.stringify(dbProfile));
-        }
-        
-        const currentProfile = dbProfile || user;
+          .eq("year_id", profile.current_year_id)
+          .order("created_at", { ascending: false })
+      : Promise.resolve({ data: null, error: null }),
+    profile.current_year_id
+      ? supabase
+          .from("exam_submissions")
+          .select("exam_id")
+          .eq("user_id", userId)
+      : Promise.resolve({ data: null, error: null })
+  ]);
 
-        const { data: enrollments } = await supabase
-          .from("enrollments")
-          .select(`
-            course_id,
-            enrolled_at,
-            courses (
-              id,
-              title,
-              description,
-              thumbnail_url,
-              price
-            )
-          `)
-          .eq("user_id", currentProfile.id)
-          .order("enrolled_at", { ascending: false });
+  const enrolledCourses: any[] = [];
+  const enrolledCourseIds = new Set<string>();
 
-        if (enrollments) {
-          const courses = enrollments
-            .map((enrollment: any) => enrollment.courses)
-            .filter(Boolean);
-          setSubscribedCourses(courses);
-        }
-
-        if (currentProfile.current_year_id) {
-          const [examsResult, submissionsResult] = await Promise.all([
-            supabase
-              .from("exams")
-              .select("*")
-              .eq("year_id", currentProfile.current_year_id)
-              .order("created_at", { ascending: false }),
-            supabase
-              .from("exam_submissions")
-              .select("exam_id")
-              .eq("user_id", currentProfile.id)
-          ]);
-
-          if (!examsResult.error) {
-            const submittedExamIds = new Set((submissionsResult.data || []).map((s: any) => s.exam_id));
-            const availableExams = (examsResult.data || []).filter((exam: any) => !submittedExamIds.has(exam.id));
-            setExams(availableExams);
-          }
-        }
-      } catch (err) {
-        console.error("Error fetching dashboard data", err);
-      } finally {
-        setLoading(false);
+  if (enrollmentsResult.data) {
+    for (const enrollment of enrollmentsResult.data) {
+      const c = (enrollment as any).courses;
+      if (c && c.is_published === true) {
+        enrolledCourses.push({ ...c, _type: "enrolled" });
+        enrolledCourseIds.add(c.id);
       }
-    };
+    }
+  }
 
-    fetchDashboardData();
-  }, [router]);
+  // Add lesson_access courses that aren't already enrolled
+  if (lessonAccessResult.data) {
+    const accessByCourse = new Map<string, any>();
+    for (const rec of lessonAccessResult.data) {
+      const c = (rec as any).courses;
+      if (c && c.is_published === true && !enrolledCourseIds.has(c.id) && !accessByCourse.has(c.id)) {
+        accessByCourse.set(c.id, { ...c, _type: "lesson_access", _lessonId: rec.lesson_id });
+      }
+    }
+    for (const course of accessByCourse.values()) {
+      enrolledCourses.push(course);
+    }
+  }
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-[#0F1623]">
-        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-amber-400"></div>
-      </div>
-    );
+  let exams: any[] = [];
+  if (examsResult.data) {
+    const submittedExamIds = new Set((submissionsResult.data || []).map((s: any) => s.exam_id));
+    exams = examsResult.data.filter((exam: any) => !submittedExamIds.has(exam.id));
   }
 
   return (
@@ -138,7 +137,7 @@ export default function DashboardPage() {
               </h2>
               <div className="flex flex-wrap items-center gap-3">
                 <span className="px-4 py-1.5 rounded-full text-sm font-semibold bg-[#FBBF24]/10 text-[#FBBF24]">
-                  {subscribedCourses.length} {subscribedCourses.length === 1 ? "كورس" : "كورسات"}
+                  {enrolledCourses.length} {enrolledCourses.length === 1 ? "كورس" : "كورسات"}
                 </span>
                 <Link
                   href="/courses"
@@ -156,7 +155,7 @@ export default function DashboardPage() {
               <ExamNote key={exam.id} exam={exam} />
             ))}
 
-            {subscribedCourses.length === 0 ? (
+            {enrolledCourses.length === 0 ? (
               <div className="text-center py-16 bg-[#0F1623] rounded-xl border border-white/5">
                 <p className="text-[#F0EDE6]/60 text-lg mb-6">
                   لم تشترك في أي كورس بعد. ابدأ رحلتك التعليمية الآن!
@@ -170,11 +169,17 @@ export default function DashboardPage() {
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {subscribedCourses.map((course: any) => {
+                {enrolledCourses.map((course: any) => {
                   const firstLetter = course.title?.charAt(0)?.toUpperCase() ?? "C";
+                  const isLessonAccess = course._type === "lesson_access";
+                  const courseSlug = `${course.id}-${slugify(course.title)}`;
+                  const cardHref = isLessonAccess
+                    ? `/courses/${courseSlug}/lessons/${course._lessonId}`
+                    : `/courses/${courseSlug}`;
                   return (
-                    <div
+                    <Link
                       key={course.id}
+                      href={cardHref}
                       className="group flex flex-col bg-[#0F1623] rounded-2xl border border-white/5 overflow-hidden hover:border-[#C0E838]/30 transition-all duration-500 text-right"
                     >
                       <div className="aspect-[4/3] w-full relative bg-[#1A2235] overflow-hidden">
@@ -184,6 +189,11 @@ export default function DashboardPage() {
                           <div className="w-full h-full flex items-center justify-center text-[#F0EDE6]/10 text-6xl font-black">{firstLetter}</div>
                         )}
                         <div className="absolute inset-0 bg-gradient-to-t from-[#0F1623] via-transparent to-transparent opacity-80" />
+                        {isLessonAccess && (
+                          <div className="absolute top-3 left-3 px-2.5 py-1 rounded-lg bg-[#FBBF24]/90 text-[#0F1623] text-xs font-bold">
+                            محاضرة مفتوحة
+                          </div>
+                        )}
                       </div>
 
                       <div className="p-6 flex flex-col flex-grow">
@@ -193,15 +203,14 @@ export default function DashboardPage() {
                         )}
                         
                         <div className="mt-auto">
-                          <Link
-                            href={`/courses/${course.id}-${slugify(course.title)}`}
-                            className="w-full inline-flex items-center justify-center px-5 py-3 rounded-xl bg-gradient-to-l from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-white font-bold text-sm transition-all"
+                          <span
+                            className="w-full inline-flex items-center justify-center px-5 py-3 rounded-xl bg-gradient-to-l from-emerald-500 to-teal-500 group-hover:from-emerald-400 group-hover:to-teal-400 text-white font-bold text-sm transition-all"
                           >
                             شاهد الآن
-                          </Link>
+                          </span>
                         </div>
                       </div>
-                    </div>
+                    </Link>
                   );
                 })}
               </div>

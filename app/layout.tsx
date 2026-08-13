@@ -29,6 +29,7 @@ const badeenDisplay = Badeen_Display({
   subsets: ["arabic"],
   display: "swap",
   variable: "--font-badeen-display",
+  fallback: ["system-ui", "arial"],
   adjustFontFallback: false,
 });
 

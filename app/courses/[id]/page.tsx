@@ -48,12 +48,14 @@ export default async function CourseLessonsPage({
       .from("courses")
       .select("id, title, description, thumbnail_url, price, is_published, created_at")
       .eq("id", id)
+      .eq("is_published", true)
       .single();
 
     const lessonsPromise = supabase
       .from("lessons")
       .select("id, course_id, title, content, video_url, order_index, created_at")
       .eq("course_id", id)
+      .eq("is_published", true)
       .order("created_at", { ascending: false });
 
     const enrollmentPromise = userId
@@ -89,16 +91,7 @@ export default async function CourseLessonsPage({
     notFound();
   }
 
-  // If the course is paid, protect access via enrollment check
-  if (course.price && course.price > 0) {
-    if (!userId) {
-      redirect("/register");
-    }
 
-    if (!enrollmentData) {
-      redirect(`/courses/${rawId}/payment`);
-    }
-  }
 
   return (
     <>

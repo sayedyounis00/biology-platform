@@ -8,6 +8,7 @@ export function fetchWithTimeout(
 
   return fetch(url, {
     ...options,
+    cache: "no-store",
     signal: options?.signal || controller.signal,
   }).finally(() => {
     clearTimeout(timeoutId);

@@ -27,9 +27,11 @@ export default async function LessonDetailPage({
   let course: Course;
   let lesson: Lesson;
   let allLessons: Lesson[] = [];
+  let enrollmentData = null;
+  let lessonAccessData = null;
 
   try {
-    const [courseRes, lessonRes, allLessonsRes, enrollmentRes] = await Promise.all([
+    const [courseRes, lessonRes, allLessonsRes, enrollmentRes, lessonAccessRes] = await Promise.all([
       supabaseClient
         .from("courses")
         .select("id, title, description, price, is_published")
@@ -40,17 +42,26 @@ export default async function LessonDetailPage({
         .select("id, course_id, title, content, video_url, order_index, attachment_urls, created_at")
         .eq("id", lessonId)
         .eq("course_id", id)
+        .eq("is_published", true)
         .single(),
       supabaseClient
         .from("lessons")
         .select("id, title, order_index, created_at, video_url")
         .eq("course_id", id)
+        .eq("is_published", true)
         .order("order_index", { ascending: true }),
       supabaseClient
         .from("enrollments")
         .select("id")
         .eq("user_id", userId)
         .eq("course_id", id)
+        .maybeSingle(),
+      supabaseClient
+        .from("lesson_access")
+        .select("id")
+        .eq("user_id", userId)
+        .eq("course_id", id)
+        .eq("lesson_id", lessonId)
         .maybeSingle()
     ]);
 
@@ -63,20 +74,22 @@ export default async function LessonDetailPage({
       notFound();
     }
 
-    // If the course is paid, protect access via enrollment check
-    if (course.price && course.price > 0 && (!enrollmentRes.data || enrollmentRes.error)) {
-      redirect(`/courses/${rawId}/payment`);
-    }
-
     if (lessonRes.error || !lessonRes.data) {
       notFound();
     }
     lesson = lessonRes.data as Lesson;
 
     allLessons = (allLessonsRes.data || []) as Lesson[];
+    enrollmentData = enrollmentRes.data && !enrollmentRes.error ? enrollmentRes.data : null;
+    lessonAccessData = lessonAccessRes.data && !lessonAccessRes.error ? lessonAccessRes.data : null;
   } catch (error) {
     console.error("Error in parallel fetch Step 1 on lesson page:", error);
     notFound();
+  }
+
+  // Redirect OUTSIDE try/catch so NEXT_REDIRECT isn't swallowed
+  if (course!.price && course!.price > 0 && !enrollmentData && !lessonAccessData) {
+    redirect(`/courses/${rawId}/payment`);
   }
 
   // Step 2: Fetch lesson progress

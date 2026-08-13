@@ -1,80 +1,43 @@
-"use client";
-
-import { useState, useEffect, Suspense } from "react";
-import { useRouter } from "next/navigation";
+import { redirect } from "next/navigation";
+import { cookies } from "next/headers";
 import Navbar from "@/components/layout/Navbar";
-import { createClient } from "@/lib/supabase/client";
+import { createClient } from "@/lib/supabase/server";
 import ProfileForm from "./ProfileForm";
-import { useSearchParams } from "next/navigation";
 
-function ProfileContent() {
-  const router = useRouter();
-  const searchParams = useSearchParams();
-  const error = searchParams.get("error");
-  const success = searchParams.get("success");
-  
-  const [profile, setProfile] = useState<any>(null);
-  const [years, setYears] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+export default async function ProfilePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
+}) {
+  const cookieStore = await cookies();
+  const userId = cookieStore.get("user_id")?.value;
 
-  useEffect(() => {
-    const userStr = localStorage.getItem("current_user");
-    if (!userStr) {
-      router.push("/login");
-      return;
-    }
-    
-    let user;
-    try {
-      user = JSON.parse(userStr);
-    } catch {
-      router.push("/login");
-      return;
-    }
-
-    setProfile(user);
-    
-    const fetchProfileData = async () => {
-      const supabase = createClient();
-      
-      try {
-        const [profileResult, yearsResult] = await Promise.all([
-          supabase
-            .from("profiles")
-            .select("*")
-            .eq("id", user.id)
-            .single(),
-          supabase
-            .from("years")
-            .select("id, title")
-            .order("order_index", { ascending: true })
-        ]);
-
-        if (profileResult.data) {
-          setProfile(profileResult.data);
-          localStorage.setItem("current_user", JSON.stringify(profileResult.data));
-        }
-
-        if (yearsResult.data) {
-          setYears(yearsResult.data);
-        }
-      } catch (err) {
-        console.error("Error fetching profile data", err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchProfileData();
-  }, [router]);
-
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-[#0F1623]">
-        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-amber-400"></div>
-      </div>
-    );
+  if (!userId) {
+    redirect("/login");
   }
+
+  const supabase = await createClient();
+
+  const [profileResult, yearsResult] = await Promise.all([
+    supabase
+      .from("profiles")
+      .select("*")
+      .eq("id", userId)
+      .single(),
+    supabase
+      .from("years")
+      .select("id, title")
+      .order("order_index", { ascending: true })
+  ]);
+
+  if (!profileResult.data) {
+    redirect("/login");
+  }
+
+  const profile = profileResult.data;
+  const years = yearsResult.data || [];
+
+  const { error, success } = await searchParams;
 
   return (
     <>
@@ -113,17 +76,5 @@ function ProfileContent() {
         </div>
       </main>
     </>
-  );
-}
-
-export default function ProfilePage() {
-  return (
-    <Suspense fallback={
-      <div className="min-h-screen flex items-center justify-center bg-[#0F1623]">
-        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-amber-400"></div>
-      </div>
-    }>
-      <ProfileContent />
-    </Suspense>
   );
 }
