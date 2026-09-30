@@ -7,6 +7,7 @@ const cairo = Cairo({
   subsets: ["arabic"],
   display: "swap",
   variable: "--font-cairo",
+  weight: ["400", "700", "600", "500", "300", "800", "900"],
 });
 
 const rakkas = Rakkas({
