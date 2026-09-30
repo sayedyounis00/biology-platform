@@ -11,7 +11,7 @@ export const metadata: Metadata = {
   description:
     "تصفح جميع كورسات الأحياء والدروس المكثفة مع مستر أحمد سعد لطلاب المرحلة الثانوية في منصه مستر احمد سعد.",
   alternates: {
-    canonical: "https://bioamrahmedsaad.com/courses",
+    canonical: "https://biomrahmedsaad.com/courses",
   },
 };
 

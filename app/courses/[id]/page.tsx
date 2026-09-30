@@ -31,12 +31,12 @@ export async function generateMetadata({
     title,
     description,
     alternates: {
-      canonical: `https://bioamrahmedsaad.com/courses/${rawId}`,
+      canonical: `https://biomrahmedsaad.com/courses/${rawId}`,
     },
     openGraph: {
       title: `${title} | منصة مستر أحمد سعد للأحياء`,
       description,
-      url: `https://bioamrahmedsaad.com/courses/${rawId}`,
+      url: `https://biomrahmedsaad.com/courses/${rawId}`,
     },
   };
 }

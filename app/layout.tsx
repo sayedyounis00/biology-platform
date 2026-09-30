@@ -54,7 +54,7 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://bioamrahmedsaad.com"),
+  metadataBase: new URL("https://biomrahmedsaad.com"),
   title: {
     default: "منصة مستر أحمد سعد للأحياء | منصه مستر احمد سعد",
     template: "%s | منصة مستر أحمد سعد للأحياء",
@@ -73,7 +73,7 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     locale: "ar_EG",
-    url: "https://bioamrahmedsaad.com",
+    url: "https://biomrahmedsaad.com",
     siteName: "منصة مستر أحمد سعد للأحياء",
     title: "منصة مستر أحمد سعد للأحياء | منصه مستر احمد سعد",
     description:
@@ -88,7 +88,7 @@ export const metadata: Metadata = {
     images: ["/website-logo.png"],
   },
   alternates: {
-    canonical: "https://bioamrahmedsaad.com",
+    canonical: "https://biomrahmedsaad.com",
   },
   robots: {
     index: true,
@@ -106,11 +106,11 @@ export default function RootLayout({
     "@graph": [
       {
         "@type": ["Organization", "EducationalOrganization"],
-        "@id": "https://bioamrahmedsaad.com/#organization",
+        "@id": "https://biomrahmedsaad.com/#organization",
         "name": "منصة مستر أحمد سعد للأحياء",
         "alternateName": ["منصه مستر احمد سعد", "منصة أحمد سعد", "منصه احمد سعد"],
-        "url": "https://bioamrahmedsaad.com",
-        "logo": "https://bioamrahmedsaad.com/website-logo.png",
+        "url": "https://biomrahmedsaad.com",
+        "logo": "https://biomrahmedsaad.com/website-logo.png",
         "description": "منصة مستر أحمد سعد التعليمية لتبسيط مادة الأحياء لطلاب الثانوية العامة في بسيون",
         "address": {
           "@type": "PostalAddress",
@@ -121,22 +121,22 @@ export default function RootLayout({
       },
       {
         "@type": "Person",
-        "@id": "https://bioamrahmedsaad.com/#teacher",
+        "@id": "https://biomrahmedsaad.com/#teacher",
         "name": "أحمد سعد",
         "alternateName": "احمد سعد",
         "jobTitle": "مدرس أحياء للثانوية العامة",
         "worksFor": {
-          "@id": "https://bioamrahmedsaad.com/#organization",
+          "@id": "https://biomrahmedsaad.com/#organization",
         },
       },
       {
         "@type": "WebSite",
-        "@id": "https://bioamrahmedsaad.com/#website",
-        "url": "https://bioamrahmedsaad.com",
+        "@id": "https://biomrahmedsaad.com/#website",
+        "url": "https://biomrahmedsaad.com",
         "name": "منصة مستر أحمد سعد للأحياء",
         "alternateName": "منصه مستر احمد سعد",
         "publisher": {
-          "@id": "https://bioamrahmedsaad.com/#organization",
+          "@id": "https://biomrahmedsaad.com/#organization",
         },
         "inLanguage": "ar",
       },
