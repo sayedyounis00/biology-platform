@@ -1,9 +1,19 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import Navbar from "@/components/layout/Navbar";
 import CourseCard from "@/components/courses/CourseCard";
 import { supabase, createClient } from "@/lib/supabase/server";
 import type { Course } from "@/types";
 import { cookies } from "next/headers";
+
+export const metadata: Metadata = {
+  title: "الكورسات والدروس المتاحة",
+  description:
+    "تصفح جميع كورسات الأحياء والدروس المكثفة مع مستر أحمد سعد لطلاب المرحلة الثانوية في منصه مستر احمد سعد.",
+  alternates: {
+    canonical: "https://bioamrahmedsaad.com/courses",
+  },
+};
 
 const gradeLabels: Record<string, string> = {
   "1": "الصف الأول الثانوي    (علوم متكامله )",

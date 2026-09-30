@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import Navbar from "@/components/layout/Navbar";
@@ -5,6 +6,40 @@ import LessonCard from "@/components/courses/LessonCard";
 import { supabase, createClient } from "@/lib/supabase/server";
 import type { Course, Lesson } from "@/types";
 import { cookies } from "next/headers";
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}): Promise<Metadata> {
+  const { id: rawId } = await params;
+  const id = rawId.split("-").slice(0, 5).join("-");
+  const supabaseClient = await createClient();
+
+  const { data: course } = await supabaseClient
+    .from("courses")
+    .select("title, description")
+    .eq("id", id)
+    .maybeSingle();
+
+  const title = course?.title || "تفاصيل الكورس";
+  const description =
+    course?.description ||
+    "دروس ومحاضرات الأحياء مع مستر أحمد سعد لطلاب الثانوية العامة في منصه مستر احمد سعد.";
+
+  return {
+    title,
+    description,
+    alternates: {
+      canonical: `https://bioamrahmedsaad.com/courses/${rawId}`,
+    },
+    openGraph: {
+      title: `${title} | منصة مستر أحمد سعد للأحياء`,
+      description,
+      url: `https://bioamrahmedsaad.com/courses/${rawId}`,
+    },
+  };
+}
 
 export default async function CourseLessonsPage({
   params,

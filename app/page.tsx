@@ -28,17 +28,18 @@ export default async function Home() {
               <div className="flex flex-col gap-6">
 
                 <h1 className="text-4xl md:text-5xl lg:text-[3.5rem] leading-[1.2] font-extrabold text-[#F0EDE6] tracking-tight">
-                  منصه <br />
+                  منصة مستر أحمد سعد <br />
                   <span
                     className="bdeen pl-1 text-[#FBBF24]/90"
                   >
-                    الاحياء
+                    الأولى في الأحياء
                   </span>{" "}
                   <br className="lalezar-regular" />
-                  الاولي في بسيون                </h1>
+                  بمركز بسيون
+                </h1>
 
                 <p className="text-[#F0EDE6]/60 text-lg leading-relaxed max-w-lg font-light">
-                  دروس مكثفه لجميع الفصول الدراسيه
+                  أهلاً بكم في منصه مستر احمد سعد للأحياء — المنصة التعليمية الأولى لطلاب الثانوية العامة بمركز بسيون. دروس مكثفة ومتابعة مستمرة.
                 </p>
 
                 <div className="flex flex-wrap gap-4 pt-4">
